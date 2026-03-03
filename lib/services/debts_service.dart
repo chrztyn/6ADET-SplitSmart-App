@@ -65,7 +65,7 @@ class DebtsService {
           'status': 'settled',
           'payment_method': paymentMethod,
           'settled_at': DateTime.now().toIso8601String(),
-          if (proofUrl != null) 'proof_url': proofUrl,
+          'proof_url': ?proofUrl,
         })
         .eq('id', debtId);
 

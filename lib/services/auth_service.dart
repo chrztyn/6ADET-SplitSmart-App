@@ -38,7 +38,7 @@ class AuthService {
   // =========== UPLOAD IMAGE PROFILE ===========
   Future<String> uploadAvatar(File file) async {
     final ext = file.path.split('.').last;
-    final path = '${currentUserId}/avatar.$ext';
+    final path = '$currentUserId/avatar.$ext';
 
     await supabase.storage.from('avatars').upload(path, file, fileOptions: const FileOptions(upsert: true));
 

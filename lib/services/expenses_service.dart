@@ -43,7 +43,7 @@ class ExpensesService {
 
     if (receiptFile != null) {
       final ext = receiptFile.path.split('.').last;
-      final path = '${currentUserId}/${DateTime.now().millisecondsSinceEpoch}.$ext';
+      final path = '$currentUserId/${DateTime.now().millisecondsSinceEpoch}.$ext';
 
       await supabase.storage.from('receipts').upload(path, receiptFile);
       receiptUrl = supabase.storage.from('receipts').getPublicUrl(path);

@@ -3,7 +3,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'providers/app_provider.dart';
-import 'screens/auth/login_screen.dart';
+import 'screens/auth/landing_screen.dart';
 import 'screens/dashboard_screen.dart';
 
 Future<void> main() async {
@@ -75,7 +75,7 @@ class _AuthGateState extends State<_AuthGate> {
   Widget build(BuildContext context) {
     final session = Supabase.instance.client.auth.currentSession;
 
-    if (session == null) return const LoginScreen();
+    if (session == null) return const LandingScreen();
 
     return Consumer<AppProvider>(
       builder: (context, provider, _) {
