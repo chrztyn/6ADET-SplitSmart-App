@@ -99,7 +99,7 @@ class _LandingScreenState extends State<LandingScreen> {
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 8),
                           child: Text(
-                            'Stop worrying about who owes what.\nSplitSmart makes bill splitting simple, transparent, and stress-free for groups of any size.',
+                            'Stop worrying about who owes what.\nSplitSmart makes bill splitting simple, transparent, and \nstress-free for groups of any size.',
                             style: GoogleFonts.montserrat(
                               fontSize: 10,
                               fontWeight: FontWeight.w500,
