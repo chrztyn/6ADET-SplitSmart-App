@@ -1,8 +1,58 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_provider.dart';
-import 'notifications_screen.dart';
 import 'profile_screen.dart';
+
+// Custom clipper for boolean subtract operation (Figma-style)
+// Creates a rounded card with a rounded square cut out from bottom-right corner
+class _SubtractedCardClipper extends CustomClipper<Path> {
+  @override
+  Path getClip(Size size) {
+    // Create base rounded rectangle path
+    // Using 32px corner radius for the main card
+    final roundedRectPath = Path()
+      ..addRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromLTWH(0, 0, size.width, size.height),
+          const Radius.circular(32),
+        ),
+      );
+
+    // Create rounded square for subtraction (positioned at bottom-right)
+    // Size: 180x180 rounded square with 45px corner radius
+    // Positioned to overlap the bottom-right corner of the main card
+    final subtractSquareSize = 180.0;
+    final subtractRadius = 45.0;
+    
+    final subtractSquarePath = Path()
+      ..addRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromLTWH(
+            size.width - subtractSquareSize / 2, // Start halfway outside the card
+            size.height - subtractSquareSize / 2, // Start halfway outside the card
+            subtractSquareSize,
+            subtractSquareSize,
+          ),
+          Radius.circular(subtractRadius),
+        ),
+      );
+
+    // Boolean subtract operation: subtract rounded square from rounded rectangle
+    // This creates the inward curved cut-out on the bottom-right
+    final subtractedPath = Path.combine(
+      PathOperation.difference,
+      roundedRectPath,
+      subtractSquarePath,
+    );
+
+    return subtractedPath;
+  }
+
+  @override
+  bool shouldReclip(CustomClipper<Path> oldClipper) => false;
+}
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -14,43 +64,119 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   int _selectedIndex = 0;
 
-  final List<Widget> _screens = [
-    const _HomeTab(),
-    const NotificationsScreen(),
-    const ProfileScreen(),
-  ];
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _screens[_selectedIndex],
-      bottomNavigationBar: NavigationBar(
+      body: _getSelectedScreen(),
+      bottomNavigationBar: _CustomBottomNavBar(
         selectedIndex: _selectedIndex,
-        onDestinationSelected: (index) => setState(() => _selectedIndex = index),
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home),
-            label: 'Home',
+        onTap: (index) => setState(() => _selectedIndex = index),
+      ),
+    );
+  }
+
+  Widget _getSelectedScreen() {
+    switch (_selectedIndex) {
+      case 0:
+        return const _HomeTab();
+      case 1:
+        // TODO: Replace with Groups screen
+        return const _PlaceholderScreen(title: 'Groups');
+      case 2:
+        // TODO: Replace with Reports screen
+        return const _PlaceholderScreen(title: 'Reports');
+      case 3:
+        // TODO: Replace with Transaction History screen
+        return const _PlaceholderScreen(title: 'Transaction History');
+      case 4:
+        return const ProfileScreen();
+      default:
+        return const _HomeTab();
+    }
+  }
+}
+
+// Placeholder screen for unimplemented sections
+class _PlaceholderScreen extends StatelessWidget {
+  final String title;
+
+  const _PlaceholderScreen({required this.title});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Color(0xFFF6FAFC),
+            Color(0xFFDCF2FF),
+            Color(0xFFB4E4FF),
+          ],
+        ),
+      ),
+      child: SafeArea(
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.construction_outlined,
+                size: 64,
+                color: const Color(0xFF038AFF),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                title,
+                style: GoogleFonts.montserrat(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFF003CC1),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Coming Soon',
+                style: GoogleFonts.montserrat(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: const Color(0xFF424242),
+                ),
+              ),
+            ],
           ),
-          NavigationDestination(
-            icon: Icon(Icons.notifications_outlined),
-            selectedIcon: Icon(Icons.notifications),
-            label: 'Notifications',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.person_outline),
-            selectedIcon: Icon(Icons.person),
-            label: 'Profile',
-          ),
-        ],
+        ),
       ),
     );
   }
 }
 
-class _HomeTab extends StatelessWidget {
+class _HomeTab extends StatefulWidget {
   const _HomeTab();
+
+  @override
+  State<_HomeTab> createState() => _HomeTabState();
+}
+
+class _HomeTabState extends State<_HomeTab> {
+  int _currentPage = 0;
+
+  void _navigateToNextCard() {
+    if (_currentPage < 1) {
+      setState(() {
+        _currentPage = 1;
+      });
+    }
+  }
+
+  void _navigateToPreviousCard() {
+    if (_currentPage > 0) {
+      setState(() {
+        _currentPage = 0;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -58,244 +184,1111 @@ class _HomeTab extends StatelessWidget {
     final profile = provider.profile;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('SplitSmart'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: () {
-              // TODO: Add expense
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Add expense feature coming soon!')),
-              );
+      body: Container(
+        // Soft blue gradient background
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Color(0xFFF6FAFC),
+              Color(0xFFDCF2FF),
+              Color(0xFFB4E4FF),
+            ],
+          ),
+        ),
+        child: SafeArea(
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 36, vertical: 32),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Top Header Section
+                  _buildHeader(context, profile),
+                  const SizedBox(height: 24),
+
+                  // Main Expense Card with horizontal slide animation
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      return GestureDetector(
+                        onHorizontalDragEnd: (details) {
+                          if (details.primaryVelocity != null) {
+                            if (details.primaryVelocity! < 0 && _currentPage == 0) {
+                              _navigateToNextCard();
+                            } else if (details.primaryVelocity! > 0 && _currentPage == 1) {
+                              _navigateToPreviousCard();
+                            }
+                          }
+                        },
+                        child: ClipRect(
+                          child: Stack(
+                            children: [
+                              AnimatedSlide(
+                                duration: const Duration(milliseconds: 400),
+                                curve: Curves.easeInOut,
+                                offset: Offset(_currentPage == 0 ? 0.0 : -1.0, 0),
+                                child: _buildMainExpenseCard(context, isFirstCard: true),
+                              ),
+                              AnimatedSlide(
+                                duration: const Duration(milliseconds: 400),
+                                curve: Curves.easeInOut,
+                                offset: Offset(_currentPage == 0 ? 1.0 : 0.0, 0),
+                                child: _buildSecondCard(context),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 42),
+
+                  // Quick Access + Balance Overview
+                  Row(
+                    children: [
+                      Expanded(child: _buildQuickAccessCard(context)),
+                      const SizedBox(width: 16),
+                      Expanded(child: _buildBalanceOverviewCard(context)),
+                    ],
+                  ),
+                  const SizedBox(height: 38),
+
+                  // Recent Activities Section
+                  _buildRecentActivities(context),
+                  const SizedBox(height: 24),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeader(BuildContext context, Map<String, dynamic>? profile) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        // Left: SplitSmart with gradient
+        ShaderMask(
+          shaderCallback: (bounds) => const LinearGradient(
+            colors: [
+              Color(0xFF003CC1),
+              Color(0xFF038AFF),
+              Color(0xFF01A7FF),
+            ],
+          ).createShader(bounds),
+          child: Text(
+            'SplitSmart',
+            style: GoogleFonts.montserrat(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+        ),
+
+        // Right: Notification bell and profile avatar
+        Row(
+          children: [
+            // Notification bell
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: const Color.fromARGB(255, 230, 245, 255).withOpacity(0.7),
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: Colors.white,
+                  width: 1.5,
+                ),
+              ),
+              child: const Icon(
+                Icons.notifications_outlined,
+                color: Color(0xFF038AFF),
+                size: 22,
+              ),
+            ),
+            const SizedBox(width: 12),
+
+            // Profile avatar
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                gradient: const RadialGradient(
+                  colors: [
+                    Color(0xFF0254D8), // Lighter blue at center
+                    Color(0xFF003CC1), // Darker blue at edges
+                  ],
+                  center: Alignment.center,
+                  radius: 0.8,
+                ),
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white, width: 2),
+              ),
+              child: Center(
+                child: Text(
+                  profile?['full_name'] != null
+                      ? (profile!['full_name'] as String).substring(0, 1).toUpperCase()
+                      : 'M',
+                  style: GoogleFonts.montserrat(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMainExpenseCard(BuildContext context, {bool isFirstCard = false}) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Responsive button positioning based on card width
+        final cardWidth = constraints.maxWidth;
+        const buttonSize = 56.0;
+        
+        // The hidden square is 180x180 centered at bottom-right corner
+        // Position button slightly left and upward from the cutout center
+        // Using percentage-based offsets for responsiveness
+        final buttonRight = (cardWidth * 0.01) + 4; // ~1% of width + 4px offset (closer to right)
+        const buttonBottom = 8.0; // 8px up from center
+        
+        return Stack(
+          clipBehavior: Clip.none,
+          children: [
+            // Main card with custom clipped shape (boolean subtract)
+            ClipPath(
+              clipper: _SubtractedCardClipper(),
+              child: Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  // Metallic blue gradient - light blue at top
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    stops: [0.0, 0.65, 1.0],
+                    colors: [
+                      Color(0xFFE3F2FD), // Light blue at top
+                      Color(0xFFC4D9F5), // Medium blue
+                      Color.fromARGB(255, 165, 202, 251),
+                    ],
+                  ),
+                  // Subtle border for depth
+                  border: Border.all(
+                    color: const Color(0xFF9AB8E8).withOpacity(0.3),
+                    width: 1,
+                  ),
+                  // Note: borderRadius removed - ClipPath handles all rounding
+                  // Blue shadow outside the card (more visible)
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF038AFF).withOpacity(0.5),
+                      blurRadius: 30,
+                      offset: const Offset(0, 12),
+                      spreadRadius: 4,
+                    ),
+                    // Secondary softer blue shadow for depth
+                    BoxShadow(
+                      color: const Color(0xFF003CC1).withOpacity(0.3),
+                      blurRadius: 50,
+                      offset: const Offset(0, 18),
+                      spreadRadius: 2,
+                    ),
+                  ],
+                ),
+                child: Stack(
+                  children: [
+                    // Blur effect at top of card background only
+                    Positioned(
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      height: 80,
+                      child: BackdropFilter(
+                        filter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [
+                                Colors.white.withOpacity(0.15),
+                                Colors.transparent,
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    // Card content
+                    Padding(
+                      padding: const EdgeInsets.all(28),
+                      child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+              // Top row: Total Expenses and Group indicator
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Left: Total Expenses
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Total Expenses',
+                        style: GoogleFonts.montserrat(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: const Color(0xFF424242),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'PHP 0.00',
+                        style: GoogleFonts.montserrat(
+                          fontSize: 32,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF003CC1),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  // Right: Group indicator
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.7),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 6,
+                          height: 6,
+                          decoration: const BoxDecoration(
+                            color: Color(0xFF038AFF),
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          'ADET Group',
+                          style: GoogleFonts.montserrat(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF424242),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+
+              // Middle: Split with avatars
+              Text(
+                'Split with',
+                style: GoogleFonts.montserrat(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  color: const Color(0xFF424242),
+                ),
+              ),
+              const SizedBox(height: 12),
+              _buildOverlappingAvatars(),
+              const SizedBox(height: 24),
+
+              // Bottom: Split Now button - Custom rounded pill button
+              Container(
+                width: 120,
+                height: 44,
+                decoration: BoxDecoration(
+                  // Strong blue gradient
+                  gradient: const LinearGradient(
+                    colors: [
+                      Color(0xFF003CC1),
+                      Color(0xFF0254D8),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(22), // Fully rounded edges
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF003CC1).withOpacity(0.35),
+                      blurRadius: 14,
+                      offset: const Offset(0, 7),
+                    ),
+                  ],
+                ),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () {
+                      // TODO: Navigate to split expense
+                    },
+                    borderRadius: BorderRadius.circular(22),
+                    child: Center(
+                      child: Text(
+                        'Split Now',
+                        style: GoogleFonts.montserrat(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          letterSpacing: 0.3,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+                      ),
+                    ), // Padding
+                  ],
+                ), // Stack
+        ), // Container
+            ), // ClipPath closes here
+
+            // Floating arrow button (centered in the hidden square - responsive)
+            Positioned(
+              right: buttonRight,
+              bottom: buttonBottom,
+              child: Container(
+                width: buttonSize,
+                height: buttonSize,
+                decoration: BoxDecoration(
+                  gradient: const RadialGradient(
+                    colors: [
+                      Color(0xFF0254D8), // Lighter blue at center
+                      Color(0xFF003CC1), // Darker blue at edges
+                    ],
+                    center: Alignment.center,
+                    radius: 0.8,
+                  ),
+                  shape: BoxShape.circle,
+                ),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () {
+                      if (_currentPage == 0) {
+                        _navigateToNextCard();
+                      } else {
+                        _navigateToPreviousCard();
+                      }
+                    },
+                    borderRadius: BorderRadius.circular(28),
+                    child: Center(
+                      child: AnimatedRotation(
+                        duration: const Duration(milliseconds: 300),
+                        turns: _currentPage == 0 ? 0 : 0.5,
+                        child: const Icon(
+                          Icons.arrow_forward,
+                          color: Colors.white,
+                          size: 24,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildOverlappingAvatars() {
+    final avatarColors = [
+      const Color(0xFFFDD835), // Yellow
+      const Color(0xFFFF7043), // Orange
+      const Color(0xFFBA68C8), // Purple
+      const Color(0xFF42A5F5), // Blue
+    ];
+
+    return SizedBox(
+      height: 32,
+      child: Stack(
+        children: [
+          ...List.generate(4, (index) {
+            return Positioned(
+              left: index * 22.0,
+              child: Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: avatarColors[index],
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 2),
+                ),
+              ),
+            );
+          }),
+          // Add button
+          Positioned(
+            left: 4 * 22.0,
+            child: Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: const Color(0xFF003CC1),
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white, width: 2),
+              ),
+              child: const Icon(
+                Icons.add,
+                color: Colors.white,
+                size: 16,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSecondCard(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final cardWidth = constraints.maxWidth;
+        const buttonSize = 56.0;
+        final buttonRight = (cardWidth * 0.01) + 4;
+        const buttonBottom = 8.0;
+
+        return Stack(
+          clipBehavior: Clip.none,
+          children: [
+            ClipPath(
+              clipper: _SubtractedCardClipper(),
+              child: Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  // Metallic blue gradient - light blue at top
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    stops: [0.0, 0.65, 1.0],
+                    colors: [
+                      Color(0xFFE3F2FD), // Light blue at top
+                      Color(0xFFC4D9F5), // Medium blue
+                      Color.fromARGB(255, 138, 181, 251)
+                    ],
+                  ),
+                  // Subtle border for depth
+                  border: Border.all(
+                    color: const Color(0xFF9AB8E8).withOpacity(0.3),
+                    width: 1,
+                  ),
+                  // Blue shadow outside the card (more visible)
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF038AFF).withOpacity(0.5),
+                      blurRadius: 30,
+                      offset: const Offset(0, 12),
+                      spreadRadius: 4,
+                    ),
+                    // Secondary softer blue shadow for depth
+                    BoxShadow(
+                      color: const Color(0xFF003CC1).withOpacity(0.3),
+                      blurRadius: 50,
+                      offset: const Offset(0, 18),
+                      spreadRadius: 2,
+                    ),
+                  ],
+                ),
+                child: Stack(
+                  children: [
+                    // Blur effect at top of card background only
+                    Positioned(
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      height: 80,
+                      child: BackdropFilter(
+                        filter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [
+                                Colors.white.withOpacity(0.15),
+                                Colors.transparent,
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    // Card content
+                    Padding(
+                      padding: const EdgeInsets.all(28),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Top row: Total Expenses and Group indicator
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Left: Total Expenses
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Total Expenses',
+                                    style: GoogleFonts.montserrat(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
+                                      color: const Color(0xFF424242),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'PHP 0.00',
+                                    style: GoogleFonts.montserrat(
+                                      fontSize: 32,
+                                      fontWeight: FontWeight.bold,
+                                      color: const Color(0xFF003CC1),
+                                    ),
+                                  ),
+                                ],
+                              ),
+
+                              // Right: Group indicator
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.7),
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 6,
+                                      height: 6,
+                                      decoration: const BoxDecoration(
+                                        color: Color(0xFF038AFF),
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      'Family Group',
+                                      style: GoogleFonts.montserrat(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w600,
+                                        color: const Color(0xFF424242),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 24),
+
+                          // Middle: Split with avatars
+                          Text(
+                            'Split with',
+                            style: GoogleFonts.montserrat(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                              color: const Color(0xFF424242),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          _buildOverlappingAvatars(),
+                          const SizedBox(height: 24),
+
+                          // Bottom: Split Now button - Custom rounded pill button
+                          Container(
+                            width: 120,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              // Strong blue gradient
+                              gradient: const LinearGradient(
+                                colors: [
+                                  Color(0xFF003CC1),
+                                  Color(0xFF0254D8),
+                                ],
+                              ),
+                              borderRadius: BorderRadius.circular(22), // Fully rounded edges
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(0xFF003CC1).withOpacity(0.35),
+                                  blurRadius: 14,
+                                  offset: const Offset(0, 7),
+                                ),
+                              ],
+                            ),
+                            child: Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                onTap: () {
+                                  // TODO: Navigate to split expense
+                                },
+                                borderRadius: BorderRadius.circular(22),
+                                child: Center(
+                                  child: Text(
+                                    'Split Now',
+                                    style: GoogleFonts.montserrat(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                      letterSpacing: 0.3,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            Positioned(
+              right: buttonRight,
+              bottom: buttonBottom,
+              child: Container(
+                width: buttonSize,
+                height: buttonSize,
+                decoration: BoxDecoration(
+                  gradient: const RadialGradient(
+                    colors: [
+                      Color(0xFF0254D8), // Lighter blue at center
+                      Color(0xFF003CC1), // Darker blue at edges
+                    ],
+                    center: Alignment.center,
+                    radius: 0.8,
+                  ),
+                  shape: BoxShape.circle,
+                ),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () {
+                      if (_currentPage == 0) {
+                        _navigateToNextCard();
+                      } else {
+                        _navigateToPreviousCard();
+                      }
+                    },
+                    borderRadius: BorderRadius.circular(28),
+                    child: Center(
+                      child: AnimatedRotation(
+                        duration: const Duration(milliseconds: 300),
+                        turns: _currentPage == 0 ? 0 : 0.5,
+                        child: const Icon(
+                          Icons.arrow_forward,
+                          color: Colors.white,
+                          size: 24,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildQuickAccessCard(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Color(0xFFE3F2FD),
+            Color(0xFFC4D9F5),
+            Color.fromARGB(255, 165, 202, 251),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: Colors.grey.withOpacity(0.3),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Text(
+              'Quick Access',
+              style: GoogleFonts.montserrat(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: const Color(0xFF003CC1),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          _buildQuickActionButton(
+            context,
+            icon: Icons.add_circle_outline,
+            label: 'New Group',
+            onTap: () {
+              // TODO: Navigate to create group
+            },
+          ),
+          const SizedBox(height: 12),
+          _buildQuickActionButton(
+            context,
+            icon: Icons.check_circle_outline,
+            label: 'Settle Debt',
+            onTap: () {
+              // TODO: Navigate to settle debt
             },
           ),
         ],
       ),
-      body: RefreshIndicator(
-        onRefresh: () async {
-          await provider.init();
-        },
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            // Welcome Card
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Welcome back${profile?['full_name'] != null ? ', ${profile!['full_name']}' : ''}!',
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Manage your shared expenses easily',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: Colors.grey[600],
-                          ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
+    );
+  }
 
-            // Balance Summary
-            Row(
-              children: [
-                Expanded(
-                  child: _SummaryCard(
-                    title: 'You Owe',
-                    amount: '\$0.00',
-                    color: Colors.red,
-                    icon: Icons.arrow_upward,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: _SummaryCard(
-                    title: 'You Are Owed',
-                    amount: '\$0.00',
-                    color: Colors.green,
-                    icon: Icons.arrow_downward,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-
-            // Quick Actions
-            Text(
-              'Quick Actions',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: _ActionCard(
-                    title: 'Add Expense',
-                    icon: Icons.add_circle_outline,
-                    color: Theme.of(context).colorScheme.primary,
-                    onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Add expense feature coming soon!')),
-                      );
-                    },
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _ActionCard(
-                    title: 'Create Group',
-                    icon: Icons.group_add,
-                    color: Colors.purple,
-                    onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Create group feature coming soon!')),
-                      );
-                    },
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _ActionCard(
-                    title: 'Settle Up',
-                    icon: Icons.check_circle_outline,
-                    color: Colors.green,
-                    onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Settle up feature coming soon!')),
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-
-            // Recent Activity
-            Text(
-              'Recent Activity',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-            ),
-            const SizedBox(height: 12),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  children: [
-                    Icon(Icons.inbox_outlined, size: 64, color: Colors.grey[400]),
-                    const SizedBox(height: 16),
-                    Text(
-                      'No recent activity',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Start by adding your first expense',
-                      style: TextStyle(color: Colors.grey[600]),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+  Widget _buildQuickActionButton(
+    BuildContext context, {
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return Container(
+      width: double.infinity,
+      height: 44,
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [
+            Color(0xFF003CC1),
+            Color(0xFF038AFF),
           ],
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF003CC1).withOpacity(0.3),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, color: Colors.white, size: 18),
+              const SizedBox(width: 8),
+              Text(
+                label,
+                style: GoogleFonts.montserrat(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
-}
 
-class _SummaryCard extends StatelessWidget {
-  final String title;
-  final String amount;
-  final Color color;
-  final IconData icon;
+  Widget _buildBalanceOverviewCard(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Color(0xFFE3F2FD),
+            Color(0xFFC4D9F5),
+            Color.fromARGB(255, 165, 202, 251),
 
-  const _SummaryCard({
-    required this.title,
-    required this.amount,
-    required this.color,
-    required this.icon,
-  });
+          ],
+        ),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: const Color.fromARGB(255, 158, 158, 158).withOpacity(0.3),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Text(
+              'Balance Overview',
+              style: GoogleFonts.montserrat(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: const Color(0xFF003CC1),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          _buildBalanceItem(
+            label: 'Owe',
+            amount: '0.00',
+            color: const Color(0xFFEF5350),
+            backgroundColor: const Color(0xFFFFEBEE),
+            borderColor: const Color(0xFFEF5350).withOpacity(0.4),
+          ),
+          const SizedBox(height: 12),
+          _buildBalanceItem(
+            label: 'Owed',
+            amount: '0.00',
+            color: const Color(0xFF66BB6A),
+            backgroundColor: const Color(0xFFE8F5E9),
+            borderColor: const Color(0xFF66BB6A).withOpacity(0.4),
+          ),
+        ],
+      ),
+    );
+  }
 
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildBalanceItem({
+    required String label,
+    required String amount,
+    required Color color,
+    required Color backgroundColor,
+    required Color borderColor,
+  }) {
+    return Container(
+      height: 44,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: borderColor,
+          width: 1.0,
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              color: color,
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              label,
+              style: GoogleFonts.montserrat(
+                fontSize: 9,
+                fontWeight: FontWeight.w600,
+                color: const Color(0xFF424242),
+              ),
+            ),
+          ),
+          Text(
+            amount,
+            style: GoogleFonts.montserrat(
+              fontSize: 13,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRecentActivities(BuildContext context) {
+    final activities = [
+      {
+        'title': 'Marked settlement',
+        'time': '2 hours ago',
+        'color': const Color(0xFF66BB6A),
+      },
+      {
+        'title': 'Added expense',
+        'time': '5 hours ago',
+        'color': const Color(0xFFEF5350),
+      },
+      {
+        'title': 'Created a group',
+        'time': 'yesterday',
+        'color': const Color(0xFFBA68C8),
+      },
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Header row
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Row(
-              children: [
-                Icon(icon, size: 20, color: color),
-                const SizedBox(width: 8),
-                Text(
-                  title,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Colors.grey[600],
+            Text(
+              'Recent Activities',
+              style: GoogleFonts.montserrat(
+                fontSize: 17,
+                fontWeight: FontWeight.bold,
+                color: const Color(0xFF003CC1),
+              ),
+            ),
+            Text(
+              'See All',
+              style: GoogleFonts.montserrat(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: const Color(0xFF038AFF),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+
+        // Activity items
+        ...activities.map((activity) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.85),
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.04),
+                    blurRadius: 10,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  // Colored status dot
+                  Container(
+                    width: 10,
+                    height: 10,
+                    decoration: BoxDecoration(
+                      color: activity['color'] as Color,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+
+                  // Activity text
+                  Expanded(
+                    child: Text(
+                      activity['title'] as String,
+                      style: GoogleFonts.montserrat(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF003CC1),
                       ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              amount,
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: color,
+                    ),
                   ),
+
+                  // Timestamp
+                  Text(
+                    activity['time'] as String,
+                    style: GoogleFonts.montserrat(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                      color: const Color(0xFF9E9E9E),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ],
-        ),
-      ),
+          );
+        }),
+      ],
     );
   }
 }
 
-class _ActionCard extends StatelessWidget {
-  final String title;
-  final IconData icon;
-  final Color color;
-  final VoidCallback onTap;
+// Custom Bottom Navigation Bar
+class _CustomBottomNavBar extends StatelessWidget {
+  final int selectedIndex;
+  final Function(int) onTap;
 
-  const _ActionCard({
-    required this.title,
-    required this.icon,
-    required this.color,
+  const _CustomBottomNavBar({
+    required this.selectedIndex,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            children: [
-              Icon(icon, size: 32, color: color),
-              const SizedBox(height: 8),
-              Text(
-                title,
-                style: Theme.of(context).textTheme.bodySmall,
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
+    return Container(
+      height: 70,
+      decoration: BoxDecoration(
+        color: Colors.white,
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          _buildNavItem(Icons.dashboard_outlined, 0),
+          _buildNavItem(Icons.group_outlined, 1),
+          _buildNavItem(Icons.article_outlined, 2),
+          _buildNavItem(Icons.history_outlined, 3),
+          _buildNavItem(Icons.person_outline, 4),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNavItem(IconData icon, int index) {
+    final isSelected = selectedIndex == index;
+
+    return InkWell(
+      onTap: () => onTap(index),
+      child: Container(
+        width: 50,
+        height: 50,
+        decoration: BoxDecoration(
+          color: isSelected
+              ? const Color(0xFF038AFF).withOpacity(0.15)
+              : Colors.transparent,
+          shape: BoxShape.circle,
+        ),
+        child: Icon(
+          icon,
+          color: isSelected ? const Color(0xFF003CC1) : const Color(0xFF9E9E9E),
+          size: 26,
         ),
       ),
     );
