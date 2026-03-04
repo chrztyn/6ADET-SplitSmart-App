@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_provider.dart';
 import 'profile_screen.dart';
+import 'groups/group_list_screen.dart';
 
 // Custom clipper for boolean subtract operation (Figma-style)
 // Creates a rounded card with a rounded square cut out from bottom-right corner
@@ -11,7 +12,6 @@ class _SubtractedCardClipper extends CustomClipper<Path> {
   @override
   Path getClip(Size size) {
     // Create base rounded rectangle path
-    // Using 32px corner radius for the main card
     final roundedRectPath = Path()
       ..addRRect(
         RRect.fromRectAndRadius(
@@ -21,7 +21,6 @@ class _SubtractedCardClipper extends CustomClipper<Path> {
       );
 
     // Create rounded square for subtraction (positioned at bottom-right)
-    // Size: 180x180 rounded square with 45px corner radius
     // Positioned to overlap the bottom-right corner of the main card
     final subtractSquareSize = 180.0;
     final subtractRadius = 45.0;
@@ -55,14 +54,22 @@ class _SubtractedCardClipper extends CustomClipper<Path> {
 }
 
 class DashboardScreen extends StatefulWidget {
-  const DashboardScreen({super.key});
+  final int initialIndex;
+
+  const DashboardScreen({super.key, this.initialIndex = 0});
 
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  int _selectedIndex = 0;
+  late int _selectedIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedIndex = widget.initialIndex;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -70,7 +77,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
       body: _getSelectedScreen(),
       bottomNavigationBar: _CustomBottomNavBar(
         selectedIndex: _selectedIndex,
-        onTap: (index) => setState(() => _selectedIndex = index),
+        onTap: (index) {
+          // Handle Groups (index 1) as modal
+          if (index == 1) {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) => const GroupListScreen(),
+                fullscreenDialog: true,
+              ),
+            );
+          } else {
+            setState(() => _selectedIndex = index);
+          }
+        },
       ),
     );
   }
@@ -354,8 +373,6 @@ class _HomeTabState extends State<_HomeTab> {
         final cardWidth = constraints.maxWidth;
         const buttonSize = 56.0;
         
-        // The hidden square is 180x180 centered at bottom-right corner
-        // Position button slightly left and upward from the cutout center
         // Using percentage-based offsets for responsiveness
         final buttonRight = (cardWidth * 0.01) + 4; // ~1% of width + 4px offset (closer to right)
         const buttonBottom = 8.0; // 8px up from center
@@ -369,14 +386,13 @@ class _HomeTabState extends State<_HomeTab> {
               child: Container(
                 width: double.infinity,
                 decoration: BoxDecoration(
-                  // Metallic blue gradient - light blue at top
                   gradient: const LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     stops: [0.0, 0.65, 1.0],
                     colors: [
-                      Color(0xFFE3F2FD), // Light blue at top
-                      Color(0xFFC4D9F5), // Medium blue
+                      Color(0xFFE3F2FD), 
+                      Color(0xFFC4D9F5),
                       Color.fromARGB(255, 165, 202, 251),
                     ],
                   ),
@@ -385,8 +401,6 @@ class _HomeTabState extends State<_HomeTab> {
                     color: const Color(0xFF9AB8E8).withOpacity(0.3),
                     width: 1,
                   ),
-                  // Note: borderRadius removed - ClipPath handles all rounding
-                  // Blue shadow outside the card (more visible)
                   boxShadow: [
                     BoxShadow(
                       color: const Color(0xFF038AFF).withOpacity(0.5),
@@ -394,7 +408,6 @@ class _HomeTabState extends State<_HomeTab> {
                       offset: const Offset(0, 12),
                       spreadRadius: 4,
                     ),
-                    // Secondary softer blue shadow for depth
                     BoxShadow(
                       color: const Color(0xFF003CC1).withOpacity(0.3),
                       blurRadius: 50,
@@ -552,11 +565,11 @@ class _HomeTabState extends State<_HomeTab> {
               ),
             ],
                       ),
-                    ), // Padding
+                    ), 
                   ],
-                ), // Stack
-        ), // Container
-            ), // ClipPath closes here
+                ), 
+        ),
+            ), 
 
             // Floating arrow button (centered in the hidden square - responsive)
             Positioned(
@@ -568,8 +581,8 @@ class _HomeTabState extends State<_HomeTab> {
                 decoration: BoxDecoration(
                   gradient: const RadialGradient(
                     colors: [
-                      Color(0xFF0254D8), // Lighter blue at center
-                      Color(0xFF003CC1), // Darker blue at edges
+                      Color(0xFF0254D8), 
+                      Color(0xFF003CC1), 
                     ],
                     center: Alignment.center,
                     radius: 0.8,
@@ -610,10 +623,10 @@ class _HomeTabState extends State<_HomeTab> {
 
   Widget _buildOverlappingAvatars() {
     final avatarColors = [
-      const Color(0xFFFDD835), // Yellow
-      const Color(0xFFFF7043), // Orange
-      const Color(0xFFBA68C8), // Purple
-      const Color(0xFF42A5F5), // Blue
+      const Color(0xFFFDD835),
+      const Color(0xFFFF7043), 
+      const Color(0xFFBA68C8),
+      const Color(0xFF42A5F5),
     ];
 
     return SizedBox(
@@ -673,23 +686,20 @@ class _HomeTabState extends State<_HomeTab> {
               child: Container(
                 width: double.infinity,
                 decoration: BoxDecoration(
-                  // Metallic blue gradient - light blue at top
                   gradient: const LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     stops: [0.0, 0.65, 1.0],
                     colors: [
-                      Color(0xFFE3F2FD), // Light blue at top
-                      Color(0xFFC4D9F5), // Medium blue
+                      Color(0xFFE3F2FD),
+                      Color(0xFFC4D9F5), 
                       Color.fromARGB(255, 138, 181, 251)
                     ],
                   ),
-                  // Subtle border for depth
                   border: Border.all(
                     color: const Color(0xFF9AB8E8).withOpacity(0.3),
                     width: 1,
                   ),
-                  // Blue shadow outside the card (more visible)
                   boxShadow: [
                     BoxShadow(
                       color: const Color(0xFF038AFF).withOpacity(0.5),
@@ -697,7 +707,6 @@ class _HomeTabState extends State<_HomeTab> {
                       offset: const Offset(0, 12),
                       spreadRadius: 4,
                     ),
-                    // Secondary softer blue shadow for depth
                     BoxShadow(
                       color: const Color(0xFF003CC1).withOpacity(0.3),
                       blurRadius: 50,
@@ -708,7 +717,6 @@ class _HomeTabState extends State<_HomeTab> {
                 ),
                 child: Stack(
                   children: [
-                    // Blur effect at top of card background only
                     Positioned(
                       top: 0,
                       left: 0,
@@ -816,14 +824,13 @@ class _HomeTabState extends State<_HomeTab> {
                             width: 120,
                             height: 44,
                             decoration: BoxDecoration(
-                              // Strong blue gradient
                               gradient: const LinearGradient(
                                 colors: [
                                   Color(0xFF003CC1),
                                   Color(0xFF0254D8),
                                 ],
                               ),
-                              borderRadius: BorderRadius.circular(22), // Fully rounded edges
+                              borderRadius: BorderRadius.circular(22), 
                               boxShadow: [
                                 BoxShadow(
                                   color: const Color(0xFF003CC1).withOpacity(0.35),
@@ -869,8 +876,8 @@ class _HomeTabState extends State<_HomeTab> {
                 decoration: BoxDecoration(
                   gradient: const RadialGradient(
                     colors: [
-                      Color(0xFF0254D8), // Lighter blue at center
-                      Color(0xFF003CC1), // Darker blue at edges
+                      Color(0xFF0254D8), 
+                      Color(0xFF003CC1), 
                     ],
                     center: Alignment.center,
                     radius: 0.8,
