@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 import '../../providers/app_provider.dart';
 import '../dashboard_screen.dart';
 import 'group_list_screen.dart';
+import 'add_member_screen.dart';
+import 'add_expense_screen.dart';
 
 class GroupExpenseScreen extends StatefulWidget {
   final Map<String, dynamic> group;
@@ -216,65 +218,67 @@ class _GroupExpenseScreenState extends State<GroupExpenseScreen> {
   }
 
   Widget _buildGroupInfoSection(BuildContext context) {
-    return Column(
-      children: [
-        // Divider
-        Container(
-          height: 1,
-          color: Colors.white.withOpacity(0.5),
-        ),
-        
-        // Group Info and Buttons
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 36, vertical: 24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Group Name
-              Text(
-                widget.group['groupName'] ?? 'Group Name',
-                style: GoogleFonts.montserrat(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: const Color(0xFF003CC1),
+  return Column(
+    children: [
+      Container(
+        height: 1,
+        color: Colors.white.withOpacity(0.5),
+      ),
+      Container(
+        padding: const EdgeInsets.symmetric(horizontal: 36, vertical: 24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              widget.group['groupName'] ?? 'Group Name',
+              style: GoogleFonts.montserrat(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: const Color(0xFF003CC1),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                _buildActionButton(
+                  context,
+                  label: 'Add Member',
+                  icon: Icons.person_add_outlined,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => AddMemberScreen(),
+                      ),
+                    );
+                  },
                 ),
-              ),
-              const SizedBox(height: 16),
-              
-              // Action Buttons
-              Row(
-                children: [
-                  _buildActionButton(
-                    context,
-                    label: 'Add Member',
-                    icon: Icons.person_add_outlined,
-                    onTap: () {
-                      // TODO: Navigate to add member screen
-                    },
-                  ),
-                  const SizedBox(width: 10),
-                  _buildActionButton(
-                    context,
-                    label: 'New Expense',
-                    icon: Icons.add_circle_outline,
-                    onTap: () {
-                      // TODO: Navigate to new expense screen
-                    },
-                  ),
-                ],
-              ),
-            ],
-          ),
+                const SizedBox(width: 10),
+                _buildActionButton(
+                  context,
+                  label: 'New Expense',
+                  icon: Icons.add_circle_outline,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => AddExpenseScreen(),
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ],
         ),
-        
-        // Bottom Divider
-        Container(
-          height: 1,
-          color: Colors.white.withOpacity(0.5),
-        ),
-      ],
-    );
-  }
+      ),
+      Container(
+        height: 1,
+        color: Colors.white.withOpacity(0.5),
+      ),
+    ],
+  );
+}
 
   Widget _buildActionButton(
     BuildContext context, {

@@ -1,24 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-class CreateGroupScreen extends StatefulWidget {
-  const CreateGroupScreen({super.key});
+class AddMemberScreen extends StatefulWidget {
+  const AddMemberScreen({super.key});
 
   @override
-  State<CreateGroupScreen> createState() => _CreateGroupScreenState();
+  State<AddMemberScreen> createState() => _AddMemberScreenState();
 }
 
-class _CreateGroupScreenState extends State<CreateGroupScreen> {
-  final TextEditingController _groupNameController = TextEditingController();
-  final TextEditingController _descriptionController = TextEditingController();
+class _AddMemberScreenState extends State<AddMemberScreen> {
   final List<TextEditingController> _memberControllers = [
     TextEditingController(),
   ];
 
   @override
   void dispose() {
-    _groupNameController.dispose();
-    _descriptionController.dispose();
     for (final c in _memberControllers) {
       c.dispose();
     }
@@ -40,27 +36,18 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
           _buildHeader(context),
           Expanded(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.only(left: 28, right: 28, top: 28, bottom: 32),
+              padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 28),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // group name
-                  _buildLabel('Group Name*'),
-                  const SizedBox(height: 8),
-                  _buildTextField(_groupNameController),
-                  const SizedBox(height: 22),
-
-                  // description
-                  _buildLabel('Description*'),
-                  const SizedBox(height: 8),
-                  _buildTextField(
-                    _descriptionController,
-                    maxLines: 4,
+                  Text(
+                    'Add Members*',
+                    style: GoogleFonts.montserrat(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF2C2C2C),
+                    ),
                   ),
-                  const SizedBox(height: 22),
-
-                  // ddd members
-                  _buildLabel('Add Members*'),
                   const SizedBox(height: 4),
                   Text(
                     'Enter email addresses of people you want to add to the group',
@@ -69,19 +56,16 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
                       color: const Color(0xFF9E9E9E),
                     ),
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 12),
 
-                  // member email fields
                   ...List.generate(_memberControllers.length, (index) {
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 10),
-                      child: _buildTextField(_memberControllers[index],
-                          hint: ''),
+                      child: _buildTextField(_memberControllers[index]),
                     );
                   }),
                   const SizedBox(height: 4),
 
-                  // add member button
                   Container(
                     width: double.infinity,
                     height: 50,
@@ -113,7 +97,6 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
                   ),
                   const SizedBox(height: 28),
 
-                  // create Group button
                   Container(
                     width: double.infinity,
                     height: 52,
@@ -135,20 +118,27 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
                     child: Material(
                       color: Colors.transparent,
                       child: InkWell(
-                        onTap: () {
-                          // TODO: implement create group logic
-                          Navigator.pop(context);
-                        },
+                        // TODO: implement add member backend logic
+                        onTap: () => Navigator.pop(context),
                         borderRadius: BorderRadius.circular(12),
-                        child: Center(
-                          child: Text(
-                            'Create Group',
-                            style: GoogleFonts.montserrat(
-                              fontSize: 15,
-                              fontWeight: FontWeight.bold,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(
+                              Icons.add_circle_outline,
                               color: Colors.white,
+                              size: 20,
                             ),
-                          ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Add Member',
+                              style: GoogleFonts.montserrat(
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
@@ -162,82 +152,63 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
     );
   }
 
-
- Widget _buildHeader(BuildContext context) {
-  return Container(
-    height: 140,
-    decoration: const BoxDecoration(
-      gradient: LinearGradient(
-        begin: Alignment.centerLeft,
-        end: Alignment.centerRight,
-        colors: [
-          Color(0xFF0663FF),
-          Color(0xFF003CC1),
-        ],
-      ),
-    ),
-    child: SafeArea(
-      bottom: false,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 28),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Create New Group',
-                  style: GoogleFonts.montserrat(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-                InkWell(
-                  onTap: () => Navigator.pop(context),
-                  child: const Icon(
-                    Icons.close,
-                    color: Colors.white,
-                    size: 28,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
+  Widget _buildHeader(BuildContext context) {
+    return Container(
+      height: 140,
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+          colors: [
+            Color(0xFF0663FF),
+            Color(0xFF003CC1),
           ],
         ),
       ),
-    ),
-  );
-}
-
-  Widget _buildLabel(String label) {
-    return Text(
-      label,
-      style: GoogleFonts.montserrat(
-        fontSize: 13,
-        fontWeight: FontWeight.bold,
-        color: const Color(0xFF2C2C2C),
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 28),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Add Members',
+                    style: GoogleFonts.montserrat(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  InkWell(
+                    onTap: () => Navigator.pop(context),
+                    child: const Icon(
+                      Icons.close,
+                      color: Colors.white,
+                      size: 28,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+            ],
+          ),
+        ),
       ),
     );
   }
 
-
-  Widget _buildTextField(
-    TextEditingController controller, {
-    int maxLines = 1,
-    String hint = '',
-  }) {
+  Widget _buildTextField(TextEditingController controller) {
     return TextField(
       controller: controller,
-      maxLines: maxLines,
       style: GoogleFonts.montserrat(
         fontSize: 13,
         color: const Color(0xFF2C2C2C),
       ),
       decoration: InputDecoration(
-        hintText: hint,
         filled: true,
         fillColor: Colors.white,
         contentPadding:

@@ -5,6 +5,10 @@ import 'package:provider/provider.dart';
 import '../providers/app_provider.dart';
 import 'profile_screen.dart';
 import 'groups/group_list_screen.dart';
+import 'reports/report_overview_screen.dart';
+import 'reports/transaction_history_screen.dart';
+import 'groups/create_group_screen.dart';
+import 'debts/debt_list_screen.dart';
 
 // Custom clipper for boolean subtract operation (Figma-style)
 // Creates a rounded card with a rounded square cut out from bottom-right corner
@@ -102,11 +106,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
         // TODO: Replace with Groups screen
         return const _PlaceholderScreen(title: 'Groups');
       case 2:
-        // TODO: Replace with Reports screen
-        return const _PlaceholderScreen(title: 'Reports');
+        return const ReportOverviewScreen();
       case 3:
-        // TODO: Replace with Transaction History screen
-        return const _PlaceholderScreen(title: 'Transaction History');
+        return const TransactionHistoryScreen();
       case 4:
         return const ProfileScreen();
       default:
@@ -970,8 +972,13 @@ class _HomeTabState extends State<_HomeTab> {
             icon: Icons.check_circle_outline,
             label: 'Settle Debt',
             onTap: () {
-              // TODO: Navigate to settle debt
-            },
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => DebtListScreen(),
+    ),
+  );
+},
           ),
         ],
       ),

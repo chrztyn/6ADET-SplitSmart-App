@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'group_expense_screen.dart';
+import 'create_group_screen.dart';
 
 class GroupListScreen extends StatefulWidget {
   const GroupListScreen({super.key});
@@ -164,9 +165,14 @@ class _GroupListScreenState extends State<GroupListScreen> {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: () {
-            // TODO: Navigate to create group screen
-          },
+         onTap: () {
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) =>  CreateGroupScreen(),
+    ),
+  );
+},
           borderRadius: BorderRadius.circular(14),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
