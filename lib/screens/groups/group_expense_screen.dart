@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:curved_navigation_bar/curved_navigation_bar.dart';
 import '../../providers/app_provider.dart';
 import '../dashboard_screen.dart';
-import 'group_list_screen.dart';
-import 'add_member_screen.dart';
 import 'add_expense_screen.dart';
+import 'add_member_screen.dart';
 
 class GroupExpenseScreen extends StatefulWidget {
   final Map<String, dynamic> group;
@@ -20,7 +20,8 @@ class GroupExpenseScreen extends StatefulWidget {
 }
 
 class _GroupExpenseScreenState extends State<GroupExpenseScreen> {
-  int _selectedIndex = 1; // Groups tab is active
+  int _selectedIndex = 1;
+  final GlobalKey<CurvedNavigationBarState> _bottomNavigationKey = GlobalKey();
 
   // Dummy expense data
   final List<Map<String, dynamic>> expenses = [
@@ -81,8 +82,42 @@ class _GroupExpenseScreenState extends State<GroupExpenseScreen> {
           ),
         ),
       ),
-      bottomNavigationBar: _CustomBottomNavBar(
-        selectedIndex: _selectedIndex,
+      bottomNavigationBar: CurvedNavigationBar(
+        key: _bottomNavigationKey,
+        index: _selectedIndex,
+        height: 65.0,
+        items: <Widget>[
+          Icon(
+            Icons.dashboard_outlined,
+            size: 30,
+            color: _selectedIndex == 0 ? const Color(0xFF038AFF) : const Color(0xFF9E9E9E),
+          ),
+          Icon(
+            Icons.group_outlined,
+            size: 30,
+            color: _selectedIndex == 1 ? const Color(0xFF038AFF) : const Color(0xFF9E9E9E),
+          ),
+          Icon(
+            Icons.article_outlined,
+            size: 30,
+            color: _selectedIndex == 2 ? const Color(0xFF038AFF) : const Color(0xFF9E9E9E),
+          ),
+          Icon(
+            Icons.history_outlined,
+            size: 30,
+            color: _selectedIndex == 3 ? const Color(0xFF038AFF) : const Color(0xFF9E9E9E),
+          ),
+          Icon(
+            Icons.person_outline,
+            size: 30,
+            color: _selectedIndex == 4 ? const Color(0xFF038AFF) : const Color(0xFF9E9E9E),
+          ),
+        ],
+        color: Colors.white,
+        buttonBackgroundColor: Colors.white,
+        backgroundColor: const Color(0xFFB4E4FF),
+        animationCurve: Curves.easeInOut,
+        animationDuration: const Duration(milliseconds: 600),
         onTap: (index) {
           if (index == 0) {
             // Navigate back to dashboard (home tab)
@@ -93,45 +128,13 @@ class _GroupExpenseScreenState extends State<GroupExpenseScreen> {
               ),
               (route) => false,
             );
-          } else if (index == 1) {
-            // Groups - navigate back to group list
-            Navigator.pushAndRemoveUntil(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const GroupListScreen(),
-                fullscreenDialog: true,
-              ),
-              (route) => route.isFirst,
-            );
-          } else if (index == 2) {
-            // Reports - go to dashboard with reports tab
-            Navigator.pushAndRemoveUntil(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const DashboardScreen(initialIndex: 2),
-              ),
-              (route) => false,
-            );
-          } else if (index == 3) {
-            // Transaction History - go to dashboard with history tab
-            Navigator.pushAndRemoveUntil(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const DashboardScreen(initialIndex: 3),
-              ),
-              (route) => false,
-            );
-          } else if (index == 4) {
-            // Profile - go to dashboard with profile tab
-            Navigator.pushAndRemoveUntil(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const DashboardScreen(initialIndex: 4),
-              ),
-              (route) => false,
-            );
+          } else {
+            setState(() {
+              _selectedIndex = index;
+            });
           }
         },
+        letIndexChange: (index) => true,
       ),
     );
   }
@@ -491,60 +494,6 @@ class _GroupExpenseScreenState extends State<GroupExpenseScreen> {
         fontSize: 12,
         fontWeight: FontWeight.w500,
         color: const Color(0xFF2C2C2C),
-      ),
-    );
-  }
-}
-
-// Custom Bottom Navigation Bar (reused from dashboard)
-class _CustomBottomNavBar extends StatelessWidget {
-  final int selectedIndex;
-  final Function(int) onTap;
-
-  const _CustomBottomNavBar({
-    required this.selectedIndex,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 70,
-      decoration: const BoxDecoration(
-        color: Colors.white,
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          _buildNavItem(Icons.dashboard_outlined, 0),
-          _buildNavItem(Icons.group_outlined, 1),
-          _buildNavItem(Icons.article_outlined, 2),
-          _buildNavItem(Icons.history_outlined, 3),
-          _buildNavItem(Icons.person_outline, 4),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildNavItem(IconData icon, int index) {
-    final isSelected = selectedIndex == index;
-
-    return InkWell(
-      onTap: () => onTap(index),
-      child: Container(
-        width: 50,
-        height: 50,
-        decoration: BoxDecoration(
-          color: isSelected
-              ? const Color(0xFF038AFF).withOpacity(0.15)
-              : Colors.transparent,
-          shape: BoxShape.circle,
-        ),
-        child: Icon(
-          icon,
-          color: isSelected ? const Color(0xFF003CC1) : const Color(0xFF9E9E9E),
-          size: 26,
-        ),
       ),
     );
   }

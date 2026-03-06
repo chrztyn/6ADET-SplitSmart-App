@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:curved_navigation_bar/curved_navigation_bar.dart';
 import '../providers/app_provider.dart';
 import 'profile_screen.dart';
 import 'groups/group_list_screen.dart';
@@ -68,6 +69,7 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   late int _selectedIndex;
+  final GlobalKey<CurvedNavigationBarState> _bottomNavigationKey = GlobalKey();
 
   @override
   void initState() {
@@ -79,21 +81,72 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: _getSelectedScreen(),
-      bottomNavigationBar: _CustomBottomNavBar(
-        selectedIndex: _selectedIndex,
+      bottomNavigationBar: CurvedNavigationBar(
+        key: _bottomNavigationKey,
+        index: _selectedIndex,
+        height: 65.0,
+        items: <Widget>[
+          Icon(
+            Icons.dashboard_outlined,
+            size: 30,
+            color: _selectedIndex == 0 ? const Color(0xFF038AFF) : const Color(0xFF9E9E9E),
+          ),
+          Icon(
+            Icons.group_outlined,
+            size: 30,
+            color: _selectedIndex == 1 ? const Color(0xFF038AFF) : const Color(0xFF9E9E9E),
+          ),
+          Icon(
+            Icons.article_outlined,
+            size: 30,
+            color: _selectedIndex == 2 ? const Color(0xFF038AFF) : const Color(0xFF9E9E9E),
+          ),
+          Icon(
+            Icons.history_outlined,
+            size: 30,
+            color: _selectedIndex == 3 ? const Color(0xFF038AFF) : const Color(0xFF9E9E9E),
+          ),
+          Icon(
+            Icons.person_outline,
+            size: 30,
+            color: _selectedIndex == 4 ? const Color(0xFF038AFF) : const Color(0xFF9E9E9E),
+          ),
+        ],
+        color: Colors.white,
+        buttonBackgroundColor: Colors.white,
+        backgroundColor: const Color(0xFFB4E4FF),
+        animationCurve: Curves.easeInOut,
+        animationDuration: const Duration(milliseconds: 600),
         onTap: (index) {
           // Handle Groups (index 1) as modal
           if (index == 1) {
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (context) => const GroupListScreen(),
-                fullscreenDialog: true,
+            Navigator.push(
+              context,
+              PageRouteBuilder(
+                pageBuilder: (context, animation, secondaryAnimation) => const GroupListScreen(),
+                transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                  const begin = Offset(1.0, 0.0);
+                  const end = Offset.zero;
+                  const curve = Curves.easeInOut;
+
+                  var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+                  var offsetAnimation = animation.drive(tween);
+
+                  return SlideTransition(
+                    position: offsetAnimation,
+                    child: child,
+                  );
+                },
               ),
             );
-          } else {
-            setState(() => _selectedIndex = index);
+            return;
           }
+
+          setState(() {
+            _selectedIndex = index;
+          });
         },
+        letIndexChange: (index) => true,
       ),
     );
   }
@@ -446,134 +499,131 @@ class _HomeTabState extends State<_HomeTab> {
                     Padding(
                       padding: const EdgeInsets.all(28),
                       child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-              // Top row: Total Expenses and Group indicator
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Left: Total Expenses
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Total Expenses',
-                        style: GoogleFonts.montserrat(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                          color: const Color(0xFF424242),
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'PHP 0.00',
-                        style: GoogleFonts.montserrat(
-                          fontSize: 32,
-                          fontWeight: FontWeight.bold,
-                          color: const Color(0xFF003CC1),
-                        ),
-                      ),
-                    ],
-                  ),
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Top row: Total Expenses and Group indicator
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Left: Total Expenses
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Total Expenses',
+                                    style: GoogleFonts.montserrat(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
+                                      color: const Color(0xFF424242),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'PHP 0.00',
+                                    style: GoogleFonts.montserrat(
+                                      fontSize: 32,
+                                      fontWeight: FontWeight.bold,
+                                      color: const Color(0xFF003CC1),
+                                    ),
+                                  ),
+                                ],
+                              ),
 
-                  // Right: Group indicator
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.7),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 6,
-                          height: 6,
-                          decoration: const BoxDecoration(
-                            color: Color(0xFF038AFF),
-                            shape: BoxShape.circle,
+                              // Right: Group indicator
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.7),
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 6,
+                                      height: 6,
+                                      decoration: const BoxDecoration(
+                                        color: Color(0xFF038AFF),
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      'Family Group',
+                                      style: GoogleFonts.montserrat(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w600,
+                                        color: const Color(0xFF424242),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
                           ),
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          'ADET Group',
-                          style: GoogleFonts.montserrat(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w600,
-                            color: const Color(0xFF424242),
+                          const SizedBox(height: 24),
+
+                          // Middle: Split with avatars
+                          Text(
+                            'Split with',
+                            style: GoogleFonts.montserrat(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                              color: const Color(0xFF424242),
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
+                          const SizedBox(height: 12),
+                          _buildOverlappingAvatars(),
+                          const SizedBox(height: 24),
 
-              // Middle: Split with avatars
-              Text(
-                'Split with',
-                style: GoogleFonts.montserrat(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                  color: const Color(0xFF424242),
-                ),
-              ),
-              const SizedBox(height: 12),
-              _buildOverlappingAvatars(),
-              const SizedBox(height: 24),
-
-              // Bottom: Split Now button - Custom rounded pill button
-              Container(
-                width: 120,
-                height: 44,
-                decoration: BoxDecoration(
-                  // Strong blue gradient
-                  gradient: const LinearGradient(
-                    colors: [
-                      Color(0xFF003CC1),
-                      Color(0xFF0254D8),
-                    ],
-                  ),
-                  borderRadius: BorderRadius.circular(22), // Fully rounded edges
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF003CC1).withOpacity(0.35),
-                      blurRadius: 14,
-                      offset: const Offset(0, 7),
+                          // Bottom: Split Now button - Custom rounded pill button
+                          Container(
+                            width: 120,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [
+                                  Color(0xFF003CC1),
+                                  Color(0xFF0254D8),
+                                ],
+                              ),
+                              borderRadius: BorderRadius.circular(22), // Fully rounded edges
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(0xFF003CC1).withOpacity(0.35),
+                                  blurRadius: 14,
+                                  offset: const Offset(0, 7),
+                                ),
+                              ],
+                            ),
+                            child: Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                onTap: () {
+                                  // TODO: Navigate to split expense
+                                },
+                                borderRadius: BorderRadius.circular(22),
+                                child: Center(
+                                  child: Text(
+                                    'Split Now',
+                                    style: GoogleFonts.montserrat(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                      letterSpacing: 0.3,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: () {
-                      // TODO: Navigate to split expense
-                    },
-                    borderRadius: BorderRadius.circular(22),
-                    child: Center(
-                      child: Text(
-                        'Split Now',
-                        style: GoogleFonts.montserrat(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                          letterSpacing: 0.3,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
               ),
-            ],
-                      ),
-                    ), 
-                  ],
-                ), 
-        ),
-            ), 
-
-            // Floating arrow button (centered in the hidden square - responsive)
+            ),
             Positioned(
               right: buttonRight,
               bottom: buttonBottom,
@@ -963,7 +1013,12 @@ class _HomeTabState extends State<_HomeTab> {
             icon: Icons.add_circle_outline,
             label: 'New Group',
             onTap: () {
-              // TODO: Navigate to create group
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const CreateGroupScreen(),
+                ),
+              );
             },
           ),
           const SizedBox(height: 12),
@@ -972,13 +1027,13 @@ class _HomeTabState extends State<_HomeTab> {
             icon: Icons.check_circle_outline,
             label: 'Settle Debt',
             onTap: () {
-  Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (context) => DebtListScreen(),
-    ),
-  );
-},
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => DebtListScreen(),
+                ),
+              );
+            },
           ),
         ],
       ),
@@ -1251,60 +1306,6 @@ class _HomeTabState extends State<_HomeTab> {
           );
         }),
       ],
-    );
-  }
-}
-
-// Custom Bottom Navigation Bar
-class _CustomBottomNavBar extends StatelessWidget {
-  final int selectedIndex;
-  final Function(int) onTap;
-
-  const _CustomBottomNavBar({
-    required this.selectedIndex,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 70,
-      decoration: BoxDecoration(
-        color: Colors.white,
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          _buildNavItem(Icons.dashboard_outlined, 0),
-          _buildNavItem(Icons.group_outlined, 1),
-          _buildNavItem(Icons.article_outlined, 2),
-          _buildNavItem(Icons.history_outlined, 3),
-          _buildNavItem(Icons.person_outline, 4),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildNavItem(IconData icon, int index) {
-    final isSelected = selectedIndex == index;
-
-    return InkWell(
-      onTap: () => onTap(index),
-      child: Container(
-        width: 50,
-        height: 50,
-        decoration: BoxDecoration(
-          color: isSelected
-              ? const Color(0xFF038AFF).withOpacity(0.15)
-              : Colors.transparent,
-          shape: BoxShape.circle,
-        ),
-        child: Icon(
-          icon,
-          color: isSelected ? const Color(0xFF003CC1) : const Color(0xFF9E9E9E),
-          size: 26,
-        ),
-      ),
     );
   }
 }
