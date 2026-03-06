@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'providers/app_provider.dart';
 import 'screens/auth/landing_screen.dart';
 import 'screens/dashboard_screen.dart';
+import 'screens/auth/forgot_password_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -63,7 +64,14 @@ class _AuthGateState extends State<_AuthGate> {
   void initState() {
     super.initState();
     Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+      if (!mounted) return;
       final provider = context.read<AppProvider>();
+
+      if (data.event == AuthChangeEvent.passwordRecovery) {
+        Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ForgotPasswordScreen()));
+        return;
+      }
+
       if (data.event == AuthChangeEvent.signedIn) {
         provider.init();
       }

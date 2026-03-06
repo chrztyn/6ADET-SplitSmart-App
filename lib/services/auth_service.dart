@@ -49,6 +49,18 @@ class AuthService {
     return url;
   }
 
+  // =========== GOOGLE SIGN IN ===========
+  Future<void> signInWithGoogle() async {
+    await supabase.auth.signInWithOAuth(OAuthProvider.google, redirectTo: 'io.supabase.splitsmart://login-callback');
+  }
+
+  // =========== FORGOT PASSWORD ===========
+  Future<void> resetPassword(String email) async {
+    await supabase.auth.resetPasswordForEmail(email, redirectTo: 'io.supabase.splitsmart://reset-callback');
+  }
+
+  String get currentUserId => supabase.auth.currentUser!.id;
+
   // =========== AUTH STATE ===========
   Stream<AuthState> get authStateChanges => supabase.auth.onAuthStateChange;
 

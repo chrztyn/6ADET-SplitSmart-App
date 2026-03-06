@@ -130,6 +130,14 @@ class AppProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> signInWithGoogle() async {
+    await _auth.signInWithGoogle();
+  }
+
+  Future<void> resetPassword(String email) async {
+    await _auth.resetPassword(email);
+  }
+
   // =========== GROUPS ===========
   Future<void> refreshGroups() async {
     _myGroups = await _groups.getMyGroups();

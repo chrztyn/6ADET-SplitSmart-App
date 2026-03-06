@@ -3,6 +3,10 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'register_screen.dart';
 import '../dashboard_screen.dart';
+import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../../providers/app_provider.dart';
+import 'forgot_password_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -24,17 +28,11 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   @override
   void initState() {
     super.initState();
-    _animationController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 600),
-    );
+    _animationController = AnimationController(vsync: this, duration: const Duration(milliseconds: 600));
     _slideAnimation = Tween<Offset>(
       begin: const Offset(0, 1),
       end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeOutCubic,
-    ));
+    ).animate(CurvedAnimation(parent: _animationController, curve: Curves.easeOutCubic));
     _animationController.forward();
   }
 
@@ -44,6 +42,17 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     _passwordController.dispose();
     _animationController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadRemembered() async {
+    final prefs = await SharedPreferences.getInstance();
+    final email = prefs.getString('remembered_email') ?? '';
+    if (email.isNotEmpty) {
+      setState(() {
+        _emailController.text = email;
+        _rememberMe = true;
+      });
+    }
   }
 
   Future<void> _signIn() async {
@@ -56,24 +65,31 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );
+
+      // ADDED - Handle remember me
+      final prefs = await SharedPreferences.getInstance();
+      if (_rememberMe) {
+        await prefs.setString('remembered_email', _emailController.text.trim());
+      } else {
+        await prefs.remove('remembered_email');
+      }
+      await context.read<AppProvider>().login(_emailController.text.trim(), _passwordController.text);
+
       if (mounted) {
         // Navigate to dashboard and remove all previous routes
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => const DashboardScreen()),
-          (route) => false,
-        );
+        Navigator.of(
+          context,
+        ).pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const DashboardScreen()), (route) => false);
       }
     } on AuthException catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(error.message), backgroundColor: Colors.red),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message), backgroundColor: Colors.red));
       }
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Unexpected error: $error'), backgroundColor: Colors.red),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Unexpected error: $error'), backgroundColor: Colors.red));
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -89,11 +105,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [
-              Color(0xFFF6FAFC),
-              Color(0xFFDCF2FF),
-              Color(0xFFB4E4FF),
-            ],
+            colors: [Color(0xFFF6FAFC), Color(0xFFDCF2FF), Color(0xFFB4E4FF)],
           ),
         ),
         child: SafeArea(
@@ -111,11 +123,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(
-                          Icons.arrow_back_ios,
-                          color: Color(0xFF075EFB),
-                          size: 20,
-                        ),
+                        const Icon(Icons.arrow_back_ios, color: Color(0xFF075EFB), size: 20),
                         const SizedBox(width: 4),
                         Text(
                           'Back',
@@ -130,7 +138,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                   ),
                 ),
               ),
-              
+
               // White card that slides up
               SlideTransition(
                 position: _slideAnimation,
@@ -140,17 +148,8 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                     height: MediaQuery.of(context).size.height * 0.8,
                     decoration: const BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.only(
-                        topLeft: Radius.circular(40),
-                        topRight: Radius.circular(40),
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Color(0x1A000000),
-                          blurRadius: 20,
-                          offset: Offset(0, -5),
-                        ),
-                      ],
+                      borderRadius: BorderRadius.only(topLeft: Radius.circular(40), topRight: Radius.circular(40)),
+                      boxShadow: [BoxShadow(color: Color(0x1A000000), blurRadius: 20, offset: Offset(0, -5))],
                     ),
                     child: SingleChildScrollView(
                       padding: const EdgeInsets.all(32),
@@ -160,7 +159,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             const SizedBox(height: 8),
-                            
+
                             // Header Section
                             Text(
                               'Welcome Back',
@@ -174,14 +173,11 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                             const SizedBox(height: 5),
                             Text(
                               'Sign in to your account',
-                              style: GoogleFonts.montserrat(
-                                fontSize: 12,
-                                color: const Color(0xFF6B7280),
-                              ),
+                              style: GoogleFonts.montserrat(fontSize: 12, color: const Color(0xFF6B7280)),
                               textAlign: TextAlign.center,
                             ),
                             const SizedBox(height: 40),
-                            
+
                             // Email Field
                             Text(
                               'Email',
@@ -197,44 +193,26 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                               style: GoogleFonts.montserrat(),
                               decoration: InputDecoration(
                                 hintText: 'Enter your Email',
-                                hintStyle: GoogleFonts.montserrat(
-                                  color: const Color(0xFFBDC3C7),
-                                  fontSize: 14,
-                                ),
+                                hintStyle: GoogleFonts.montserrat(color: const Color(0xFFBDC3C7), fontSize: 14),
                                 filled: true,
                                 fillColor: Colors.white,
                                 enabledBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
-                                  borderSide: const BorderSide(
-                                    color: Color(0xFFB1B1B0),
-                                    width: 0.5,
-                                  ),
+                                  borderSide: const BorderSide(color: Color(0xFFB1B1B0), width: 0.5),
                                 ),
                                 focusedBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
-                                  borderSide: const BorderSide(
-                                    color: Color(0xFFA0A0A0),
-                                    width: 0.5,
-                                  ),
+                                  borderSide: const BorderSide(color: Color(0xFFA0A0A0), width: 0.5),
                                 ),
                                 errorBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
-                                  borderSide: const BorderSide(
-                                    color: Colors.red,
-                                    width: 0.5,
-                                  ),
+                                  borderSide: const BorderSide(color: Colors.red, width: 0.5),
                                 ),
                                 focusedErrorBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
-                                  borderSide: const BorderSide(
-                                    color: Colors.red,
-                                    width: 0.5,
-                                  ),
+                                  borderSide: const BorderSide(color: Colors.red, width: 0.5),
                                 ),
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 20,
-                                  vertical: 16,
-                                ),
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                               ),
                               keyboardType: TextInputType.emailAddress,
                               validator: (value) {
@@ -248,7 +226,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                               },
                             ),
                             const SizedBox(height: 20),
-                            
+
                             // Password Field
                             Text(
                               'Password',
@@ -264,44 +242,26 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                               style: GoogleFonts.montserrat(),
                               decoration: InputDecoration(
                                 hintText: 'Create a password',
-                                hintStyle: GoogleFonts.montserrat(
-                                  color: const Color(0xFFBDC3C7),
-                                  fontSize: 14,
-                                ),
+                                hintStyle: GoogleFonts.montserrat(color: const Color(0xFFBDC3C7), fontSize: 14),
                                 filled: true,
                                 fillColor: Colors.white,
                                 enabledBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
-                                  borderSide: const BorderSide(
-                                    color: Color(0xFFB1B1B0),
-                                    width: 0.5,
-                                  ),
+                                  borderSide: const BorderSide(color: Color(0xFFB1B1B0), width: 0.5),
                                 ),
                                 focusedBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
-                                  borderSide: const BorderSide(
-                                    color: Color(0xFFA0A0A0),
-                                    width: 0.5,
-                                  ),
+                                  borderSide: const BorderSide(color: Color(0xFFA0A0A0), width: 0.5),
                                 ),
                                 errorBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
-                                  borderSide: const BorderSide(
-                                    color: Colors.red,
-                                    width: 0.5,
-                                  ),
+                                  borderSide: const BorderSide(color: Colors.red, width: 0.5),
                                 ),
                                 focusedErrorBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
-                                  borderSide: const BorderSide(
-                                    color: Colors.red,
-                                    width: 0.5,
-                                  ),
+                                  borderSide: const BorderSide(color: Colors.red, width: 0.5),
                                 ),
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 20,
-                                  vertical: 16,
-                                ),
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                                 suffixIcon: IconButton(
                                   icon: Icon(
                                     _obscurePassword ? Icons.visibility_off : Icons.visibility,
@@ -323,7 +283,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                               },
                             ),
                             const SizedBox(height: 16),
-                            
+
                             // Remember Me & Forgot Password Row
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -341,13 +301,8 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                             setState(() => _rememberMe = value ?? false);
                                           },
                                           activeColor: const Color(0xFF075EFB),
-                                          side: const BorderSide(
-                                            color: Color(0xFFB1B1B0),
-                                            width: 0.5,
-                                          ),
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(3),
-                                          ),
+                                          side: const BorderSide(color: Color(0xFFB1B1B0), width: 0.5),
+                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(3)),
                                           materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                                           visualDensity: VisualDensity.compact,
                                         ),
@@ -356,17 +311,16 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                     const SizedBox(width: 6),
                                     Text(
                                       'Remember me',
-                                      style: GoogleFonts.montserrat(
-                                        fontSize: 12,
-                                        color: const Color(0xFF6B7280),
-                                      ),
+                                      style: GoogleFonts.montserrat(fontSize: 12, color: const Color(0xFF6B7280)),
                                     ),
                                   ],
                                 ),
                                 InkWell(
-                                  onTap: () {
-                                    // TODO: Implement forgot password
-                                  },
+                                  // ADDED - Navigate to ForgotPasswordScreen
+                                  onTap: () => Navigator.push(
+                                    context,
+                                    MaterialPageRoute(builder: (_) => const ForgotPasswordScreen()),
+                                  ),
                                   child: Text(
                                     'Forgot password?',
                                     style: GoogleFonts.montserrat(
@@ -379,19 +333,14 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                               ],
                             ),
                             const SizedBox(height: 32),
-                            
+
                             // Sign In Button
                             GestureDetector(
                               onTap: _isLoading ? null : _signIn,
                               child: Container(
                                 height: 48,
                                 decoration: BoxDecoration(
-                                  gradient: const LinearGradient(
-                                    colors: [
-                                      Color(0xFF075EFB),
-                                      Color(0xFF0041C6),
-                                    ],
-                                  ),
+                                  gradient: const LinearGradient(colors: [Color(0xFF075EFB), Color(0xFF0041C6)]),
                                   borderRadius: BorderRadius.circular(12),
                                   boxShadow: [
                                     BoxShadow(
@@ -423,7 +372,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                               ),
                             ),
                             const SizedBox(height: 32),
-                            
+
                             // Divider with text
                             Row(
                               children: [
@@ -432,34 +381,27 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                   padding: const EdgeInsets.symmetric(horizontal: 16),
                                   child: Text(
                                     'Sign in with',
-                                    style: GoogleFonts.montserrat(
-                                      fontSize: 10,
-                                      color: const Color(0xFF9CA3AF),
-                                    ),
+                                    style: GoogleFonts.montserrat(fontSize: 10, color: const Color(0xFF9CA3AF)),
                                   ),
                                 ),
                                 const Expanded(child: Divider(color: Color(0xFFE5E7EB))),
                               ],
                             ),
                             const SizedBox(height: 24),
-                            
+
                             // Continue with Google Button
                             Container(
                               height: 54,
                               decoration: BoxDecoration(
                                 color: const Color.fromARGB(255, 255, 255, 255),
-                                border: Border.all(
-                                  color: const Color(0xFFB1B1B0),
-                                  width: 0.5,
-                                ),
+                                border: Border.all(color: const Color(0xFFB1B1B0), width: 0.5),
                                 borderRadius: BorderRadius.circular(30),
                               ),
                               child: Material(
                                 color: Colors.transparent,
                                 child: InkWell(
-                                  onTap: () {
-                                    // TODO: Implement Google Sign-In
-                                  },
+                                  // ADDED - Implement Google Sign-In via provider
+                                  onTap: () => context.read<AppProvider>().signInWithGoogle(),
                                   borderRadius: BorderRadius.circular(30),
                                   child: Padding(
                                     padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -467,11 +409,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                       mainAxisAlignment: MainAxisAlignment.center,
                                       children: [
                                         // Google logo
-                                        Image.asset(
-                                          'assets/images/Google.png',
-                                          width: 20,
-                                          height: 20,
-                                        ),
+                                        Image.asset('assets/images/Google.png', width: 20, height: 20),
                                         const SizedBox(width: 12),
                                         Text(
                                           'Continue with Google',
@@ -488,33 +426,26 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                               ),
                             ),
                             const SizedBox(height: 32),
-                            
+
                             // Footer - Sign Up Link
                             Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Text(
                                   'Already have an account? ',
-                                  style: GoogleFonts.montserrat(
-                                    fontSize: 10,
-                                    color: const Color(0xFF6B7280),
-                                  ),
+                                  style: GoogleFonts.montserrat(fontSize: 10, color: const Color(0xFF6B7280)),
                                 ),
                                 InkWell(
                                   onTap: () {
                                     Navigator.of(context).pushReplacement(
                                       PageRouteBuilder(
-                                        pageBuilder: (context, animation, secondaryAnimation) =>
-                                            const RegisterScreen(),
+                                        pageBuilder: (context, animation, secondaryAnimation) => const RegisterScreen(),
                                         transitionsBuilder: (context, animation, secondaryAnimation, child) {
                                           return SlideTransition(
                                             position: Tween<Offset>(
                                               begin: const Offset(0, 1),
                                               end: Offset.zero,
-                                            ).animate(CurvedAnimation(
-                                              parent: animation,
-                                              curve: Curves.easeOutCubic,
-                                            )),
+                                            ).animate(CurvedAnimation(parent: animation, curve: Curves.easeOutCubic)),
                                             child: child,
                                           );
                                         },

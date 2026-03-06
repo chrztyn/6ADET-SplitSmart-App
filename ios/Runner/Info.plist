@@ -52,6 +52,15 @@
     <string>SplitSmart needs camera access to capture receipts.</string>
     <key>NSPhotoLibraryAddUsageDescription</key>
     <string>SplitSmart needs to save receipts to your photo library.</string>
-
+    
+    <key>CFBundleURLTypes</key>
+<array>
+    <dict>
+        <key>CFBundleURLSchemes</key>
+        <array>
+            <string>io.supabase.splitsmart</string>
+        </array>
+    </dict>
+</array>
 </dict>
 </plist>
