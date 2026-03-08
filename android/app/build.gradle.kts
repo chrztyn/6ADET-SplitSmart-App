@@ -21,7 +21,7 @@ android {
 
     defaultConfig {
         applicationId = "com.example.splitsmart"
-        minSdk = 21
+        minSdk = flutter.minSdkVersion
         targetSdk = 33
         versionCode = flutter.versionCode
         versionName = flutter.versionName

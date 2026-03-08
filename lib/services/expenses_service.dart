@@ -135,4 +135,30 @@ class ExpensesService {
 
     return data.fold<double>(0.0, (double sum, dynamic e) => sum + (e['amount'] as num).toDouble());
   }
+
+  // =========== RECENT ACTIVITY ===========
+  Future<List<Map<String, dynamic>>> getRecentActivity() async {
+    // Get user's group IDs first
+    final memberships = await supabase.from('group_members').select('group_id').eq('user_id', currentUserId);
+
+    final groupIds = (memberships as List).map((r) => r['group_id'] as String).toList();
+
+    if (groupIds.isEmpty) return [];
+
+    final data = await supabase
+        .from('expenses')
+        .select('''
+          id, description, amount, date,
+          groups:group_id ( name ),
+          profiles:paid_by_user_id ( name )
+        ''')
+        .inFilter('group_id', groupIds)
+        .order('date', ascending: false)
+        .limit(10);
+
+    return List<Map<String, dynamic>>.from(data);
+  }
+
+  // =========== CURRENT USER ID ===========
+  String get currentUserId => supabase.auth.currentUser!.id;
 }

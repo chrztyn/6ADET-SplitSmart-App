@@ -10,10 +10,7 @@ import 'add_member_screen.dart';
 class GroupExpenseScreen extends StatefulWidget {
   final Map<String, dynamic> group;
 
-  const GroupExpenseScreen({
-    super.key,
-    required this.group,
-  });
+  const GroupExpenseScreen({super.key, required this.group});
 
   @override
   State<GroupExpenseScreen> createState() => _GroupExpenseScreenState();
@@ -22,26 +19,39 @@ class GroupExpenseScreen extends StatefulWidget {
 class _GroupExpenseScreenState extends State<GroupExpenseScreen> {
   int _selectedIndex = 1;
   final GlobalKey<CurvedNavigationBarState> _bottomNavigationKey = GlobalKey();
+  List<Map<String, dynamic>> _expenses = [];
+  bool _loadingExpenses = true;
 
-  // Dummy expense data
-  final List<Map<String, dynamic>> expenses = [
-    {
-      'title': 'Groceries',
-      'amount': 1500.00,
-      'payor': 'Micah Lapuz',
-      'perPerson': 375.00,
-      'splitBetween': '4 members',
-      'date': '03/01/2026',
-    },
-    {
-      'title': 'Restaurant Dinner',
-      'amount': 2400.00,
-      'payor': 'Maxene Quiambao',
-      'perPerson': 600.00,
-      'splitBetween': '4 members',
-      'date': '03/03/2026',
-    },
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _loadExpenses();
+  }
+
+  // ADDED - load real expenses from Supabase
+  Future<void> _loadExpenses() async {
+    setState(() => _loadingExpenses = true);
+    try {
+      final provider = context.read<AppProvider>();
+      final groupId = widget.group['id'] as String;
+      final data = await provider.getGroupExpenses(groupId);
+      if (mounted) setState(() => _expenses = data);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error loading expenses: $e', style: GoogleFonts.montserrat()),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _loadingExpenses = false);
+    }
+  }
+
+  String get _groupId => widget.group['id'] as String;
+  String get _groupName => widget.group['name'] ?? widget.group['groupName'] ?? 'Group';
 
   @override
   Widget build(BuildContext context) {
@@ -50,22 +60,17 @@ class _GroupExpenseScreenState extends State<GroupExpenseScreen> {
 
     return Scaffold(
       body: Container(
-        // Same background gradient as Dashboard
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [
-              Color(0xFFF6FAFC),
-              Color(0xFFDCF2FF),
-              Color(0xFFB4E4FF),
-            ],
+            colors: [Color(0xFFF6FAFC), Color(0xFFDCF2FF), Color(0xFFB4E4FF)],
           ),
         ),
         child: SafeArea(
           child: Column(
             children: [
-              // Header (Same as Dashboard)
+              // Header
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 36, vertical: 32),
                 child: _buildHeader(context, profile),
@@ -75,9 +80,7 @@ class _GroupExpenseScreenState extends State<GroupExpenseScreen> {
               _buildGroupInfoSection(context),
 
               // Expense Cards List
-              Expanded(
-                child: _buildExpenseList(context),
-              ),
+              Expanded(child: _buildExpenseList(context)),
             ],
           ),
         ),
@@ -120,18 +123,13 @@ class _GroupExpenseScreenState extends State<GroupExpenseScreen> {
         animationDuration: const Duration(milliseconds: 600),
         onTap: (index) {
           if (index == 0) {
-            // Navigate back to dashboard (home tab)
             Navigator.pushAndRemoveUntil(
               context,
-              MaterialPageRoute(
-                builder: (context) => const DashboardScreen(initialIndex: 0),
-              ),
+              MaterialPageRoute(builder: (context) => const DashboardScreen(initialIndex: 0)),
               (route) => false,
             );
           } else {
-            setState(() {
-              _selectedIndex = index;
-            });
+            setState(() => _selectedIndex = index);
           }
         },
         letIndexChange: (index) => true,
@@ -143,58 +141,34 @@ class _GroupExpenseScreenState extends State<GroupExpenseScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        // Left: SplitSmart with gradient
         ShaderMask(
           shaderCallback: (bounds) => const LinearGradient(
-            colors: [
-              Color(0xFF003CC1),
-              Color(0xFF038AFF),
-              Color(0xFF01A7FF),
-            ],
+            colors: [Color(0xFF003CC1), Color(0xFF038AFF), Color(0xFF01A7FF)],
           ).createShader(bounds),
           child: Text(
             'SplitSmart',
-            style: GoogleFonts.montserrat(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
+            style: GoogleFonts.montserrat(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
           ),
         ),
-
-        // Right: Notification bell and profile avatar
         Row(
           children: [
-            // Notification bell
             Container(
               width: 40,
               height: 40,
               decoration: BoxDecoration(
                 color: const Color.fromARGB(255, 230, 245, 255).withOpacity(0.7),
                 shape: BoxShape.circle,
-                border: Border.all(
-                  color: Colors.white,
-                  width: 1.5,
-                ),
+                border: Border.all(color: Colors.white, width: 1.5),
               ),
-              child: const Icon(
-                Icons.notifications_outlined,
-                color: Color(0xFF038AFF),
-                size: 22,
-              ),
+              child: const Icon(Icons.notifications_outlined, color: Color(0xFF038AFF), size: 22),
             ),
             const SizedBox(width: 12),
-
-            // Profile avatar
             Container(
               width: 40,
               height: 40,
               decoration: BoxDecoration(
                 gradient: const RadialGradient(
-                  colors: [
-                    Color(0xFF0254D8),
-                    Color(0xFF003CC1), 
-                  ],
+                  colors: [Color(0xFF0254D8), Color(0xFF003CC1)],
                   center: Alignment.center,
                   radius: 0.8,
                 ),
@@ -203,14 +177,9 @@ class _GroupExpenseScreenState extends State<GroupExpenseScreen> {
               ),
               child: Center(
                 child: Text(
-                  profile?['full_name'] != null
-                      ? (profile!['full_name'] as String).substring(0, 1).toUpperCase()
-                      : 'M',
-                  style: GoogleFonts.montserrat(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
+                  // FIXED - use 'name' not 'full_name'
+                  profile?['name'] != null ? (profile!['name'] as String).substring(0, 1).toUpperCase() : '?',
+                  style: GoogleFonts.montserrat(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
                 ),
               ),
             ),
@@ -221,67 +190,69 @@ class _GroupExpenseScreenState extends State<GroupExpenseScreen> {
   }
 
   Widget _buildGroupInfoSection(BuildContext context) {
-  return Column(
-    children: [
-      Container(
-        height: 1,
-        color: Colors.white.withOpacity(0.5),
-      ),
-      Container(
-        padding: const EdgeInsets.symmetric(horizontal: 36, vertical: 24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              widget.group['groupName'] ?? 'Group Name',
-              style: GoogleFonts.montserrat(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                color: const Color(0xFF003CC1),
+    return Column(
+      children: [
+        Container(height: 1, color: Colors.white.withOpacity(0.5)),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 36, vertical: 24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // FIXED - use 'name' field
+              Text(
+                _groupName,
+                style: GoogleFonts.montserrat(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFF003CC1),
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                _buildActionButton(
-                  context,
-                  label: 'Add Member',
-                  icon: Icons.person_add_outlined,
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => AddMemberScreen(),
-                      ),
-                    );
-                  },
-                ),
-                const SizedBox(width: 10),
-                _buildActionButton(
-                  context,
-                  label: 'New Expense',
-                  icon: Icons.add_circle_outline,
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => AddExpenseScreen(),
-                      ),
-                    );
-                  },
-                ),
-              ],
-            ),
-          ],
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  _buildActionButton(
+                    context,
+                    label: 'Add Member',
+                    icon: Icons.person_add_outlined,
+                    onTap: () async {
+                      // FIXED - pass groupId
+                      final result = await Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => AddMemberScreen(groupId: _groupId)),
+                      );
+                      if (result == true && mounted) {
+                        context.read<AppProvider>().refreshGroups();
+                      }
+                    },
+                  ),
+                  const SizedBox(width: 10),
+                  _buildActionButton(
+                    context,
+                    label: 'New Expense',
+                    icon: Icons.add_circle_outline,
+                    onTap: () async {
+                      // FIXED - pass groupId and groupName
+                      final result = await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => AddExpenseScreen(groupId: _groupId, groupName: _groupName),
+                        ),
+                      );
+                      if (result == true && mounted) {
+                        _loadExpenses(); // refresh expense list
+                        context.read<AppProvider>().init(); // refresh dashboard
+                      }
+                    },
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
-      ),
-      Container(
-        height: 1,
-        color: Colors.white.withOpacity(0.5),
-      ),
-    ],
-  );
-}
+        Container(height: 1, color: Colors.white.withOpacity(0.5)),
+      ],
+    );
+  }
 
   Widget _buildActionButton(
     BuildContext context, {
@@ -293,19 +264,10 @@ class _GroupExpenseScreenState extends State<GroupExpenseScreen> {
       height: 40,
       padding: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [
-            Color(0xFF003CC1),
-            Color(0xFF038AFF),
-          ],
-        ),
+        gradient: const LinearGradient(colors: [Color(0xFF003CC1), Color(0xFF038AFF)]),
         borderRadius: BorderRadius.circular(14),
         boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF003CC1).withOpacity(0.25),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
+          BoxShadow(color: const Color(0xFF003CC1).withOpacity(0.25), blurRadius: 8, offset: const Offset(0, 4)),
         ],
       ),
       child: Material(
@@ -315,21 +277,12 @@ class _GroupExpenseScreenState extends State<GroupExpenseScreen> {
           borderRadius: BorderRadius.circular(14),
           child: Row(
             mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
-                icon,
-                color: Colors.white,
-                size: 16,
-              ),
+              Icon(icon, color: Colors.white, size: 16),
               const SizedBox(width: 6),
               Text(
                 label,
-                style: GoogleFonts.montserrat(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white,
-                ),
+                style: GoogleFonts.montserrat(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white),
               ),
             ],
           ),
@@ -339,24 +292,57 @@ class _GroupExpenseScreenState extends State<GroupExpenseScreen> {
   }
 
   Widget _buildExpenseList(BuildContext context) {
-    return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 36, vertical: 24),
-      itemCount: expenses.length,
-      itemBuilder: (context, index) {
-        final expense = expenses[index];
-        return _buildExpenseCard(
-          title: expense['title'],
-          amount: expense['amount'],
-          payor: expense['payor'],
-          perPerson: expense['perPerson'],
-          splitBetween: expense['splitBetween'],
-          date: expense['date'],
-        );
-      },
+    if (_loadingExpenses) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_expenses.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.receipt_long_outlined, size: 48, color: Color(0xFF9E9E9E)),
+            const SizedBox(height: 12),
+            Text('No expenses yet', style: GoogleFonts.montserrat(fontSize: 14, color: const Color(0xFF9E9E9E))),
+            const SizedBox(height: 4),
+            Text(
+              'Tap "New Expense" to add one',
+              style: GoogleFonts.montserrat(fontSize: 12, color: const Color(0xFF9E9E9E)),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: _loadExpenses,
+      child: ListView.builder(
+        padding: const EdgeInsets.symmetric(horizontal: 36, vertical: 24),
+        itemCount: _expenses.length,
+        itemBuilder: (context, index) {
+          final expense = _expenses[index];
+          final amount = (expense['amount'] as num?)?.toDouble() ?? 0.0;
+          final memberCount = expense['member_count'] ?? 1;
+          final perPerson = memberCount > 0 ? amount / memberCount : amount;
+          final payerName = (expense['profiles'] as Map?)?['name'] ?? 'Unknown';
+          final date = expense['date'] ?? expense['created_at'] ?? '';
+
+          return _buildExpenseCard(
+            id: expense['id'],
+            title: expense['description'] ?? 'Expense',
+            amount: amount,
+            payor: payerName,
+            perPerson: perPerson,
+            splitBetween: '$memberCount member(s)',
+            date: date,
+          );
+        },
+      ),
     );
   }
 
   Widget _buildExpenseCard({
+    required String id,
     required String title,
     required double amount,
     required String payor,
@@ -370,26 +356,15 @@ class _GroupExpenseScreenState extends State<GroupExpenseScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: const Color(0xFF038AFF).withOpacity(0.3),
-          width: 1.5,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.06),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        border: Border.all(color: const Color(0xFF038AFF).withOpacity(0.3), width: 1.5),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 12, offset: const Offset(0, 4))],
       ),
       child: Column(
         children: [
-          // Top Row: Title/Amount and Delete Icon
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Left: Title and Amount
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -412,31 +387,42 @@ class _GroupExpenseScreenState extends State<GroupExpenseScreen> {
                   ),
                 ],
               ),
-              
-              // Right: Delete Icon
+              // ADDED - delete expense
               InkWell(
-                onTap: () {
-                  // TODO: Handle delete expense
+                onTap: () async {
+                  final confirm = await showDialog<bool>(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      title: Text('Delete Expense', style: GoogleFonts.montserrat(fontWeight: FontWeight.bold)),
+                      content: Text('Are you sure you want to delete "$title"?', style: GoogleFonts.montserrat()),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx, false),
+                          child: Text('Cancel', style: GoogleFonts.montserrat()),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx, true),
+                          child: Text('Delete', style: GoogleFonts.montserrat(color: Colors.red)),
+                        ),
+                      ],
+                    ),
+                  );
+                  if (confirm == true && mounted) {
+                    await context.read<AppProvider>().deleteExpense(id);
+                    _loadExpenses();
+                  }
                 },
                 child: Container(
                   padding: const EdgeInsets.all(6),
-                  child: const Icon(
-                    Icons.delete_outline,
-                    color: Color(0xFFEF5350),
-                    size: 24,
-                  ),
+                  child: const Icon(Icons.delete_outline, color: Color(0xFFEF5350), size: 24),
                 ),
               ),
             ],
           ),
-          
           const SizedBox(height: 16),
-          
-          // Bottom Content: Two-column layout
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Left Column: Labels
               Expanded(
                 flex: 2,
                 child: Column(
@@ -452,8 +438,6 @@ class _GroupExpenseScreenState extends State<GroupExpenseScreen> {
                   ],
                 ),
               ),
-              
-              // Right Column: Values
               Expanded(
                 flex: 4,
                 child: Column(
@@ -479,22 +463,14 @@ class _GroupExpenseScreenState extends State<GroupExpenseScreen> {
   Widget _buildDetailLabel(String label) {
     return Text(
       label,
-      style: GoogleFonts.montserrat(
-        fontSize: 12,
-        fontWeight: FontWeight.w600,
-        color: const Color(0xFF757575),
-      ),
+      style: GoogleFonts.montserrat(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF757575)),
     );
   }
 
   Widget _buildDetailValue(String value) {
     return Text(
       value,
-      style: GoogleFonts.montserrat(
-        fontSize: 12,
-        fontWeight: FontWeight.w500,
-        color: const Color(0xFF2C2C2C),
-      ),
+      style: GoogleFonts.montserrat(fontSize: 12, fontWeight: FontWeight.w500, color: const Color(0xFF2C2C2C)),
     );
   }
 }

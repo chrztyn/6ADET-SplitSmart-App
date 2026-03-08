@@ -1,21 +1,33 @@
 import 'supabase_client.dart';
 
 class GroupsService {
+  // =========== CURRENT USER ID ===========
+  String get currentUserId => supabase.auth.currentUser!.id;
+
   // =========== GET ALL GROUPS ===========
   Future<List<Map<String, dynamic>>> getMyGroups() async {
-    final data = await supabase
-        .from('group_members')
-        .select('''
-          group:groups (
-            id, name, description, created_by, created_at,
-            members:group_members (
-              user:profiles ( id, name, email, avatar_url )
-            )
-          )
-        ''')
-        .eq('user_id', currentUserId);
+    // Step 1 - get group IDs the user belongs to
+    final memberships = await supabase.from('group_members').select('group_id').eq('user_id', currentUserId);
 
-    return (data as List).map((row) => row['group'] as Map<String, dynamic>).toList();
+    final groupIds = (memberships as List).map((r) => r['group_id'] as String).toList();
+
+    if (groupIds.isEmpty) return [];
+
+    // Step 2 - fetch group details
+    final groups = await supabase
+        .from('groups')
+        .select('id, name, description, created_by, created_at')
+        .inFilter('id', groupIds);
+
+    // Step 3 - add member_count to each group
+    final result = <Map<String, dynamic>>[];
+    for (final g in groups as List) {
+      final countData = await supabase.from('group_members').select('user_id').eq('group_id', g['id'] as String);
+      final map = Map<String, dynamic>.from(g);
+      map['member_count'] = (countData as List).length;
+      result.add(map);
+    }
+    return result;
   }
 
   // =========== GET SINGLE GROUP ===========
@@ -99,21 +111,20 @@ class GroupsService {
     return balances;
   }
 
-  // =========== GROUP MEMBER CHANGES ===========
+  // =========== WATCH GROUP MEMBER CHANGES ===========
   Stream<List<Map<String, dynamic>>> watchMyGroups() {
     return supabase.from('group_members').stream(primaryKey: ['id']).eq('user_id', currentUserId);
   }
 
-  // =========== SEARCH GROUP BY NAMES ===========
+  // =========== SEARCH GROUPS BY NAME ===========
   Future<List<Map<String, dynamic>>> searchGroups(String query) async {
     final allGroups = await getMyGroups();
     final q = query.toLowerCase();
     return allGroups.where((g) => (g['name'] as String).toLowerCase().contains(q)).toList();
   }
 
-  // ======= FIND USERS BY EMAIL WHEN ADDING  ========
+  // =========== FIND USER BY EMAIL ===========
   Future<Map<String, dynamic>?> findUserByEmail(String email) async {
-    final data = await supabase.from('profiles').select('id, name, email').eq('email', email).maybeSingle();
-    return data;
+    return await supabase.from('profiles').select('id, name, email').eq('email', email).maybeSingle();
   }
 }

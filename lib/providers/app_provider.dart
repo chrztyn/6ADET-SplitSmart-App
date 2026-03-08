@@ -22,6 +22,7 @@ class AppProvider extends ChangeNotifier {
   List<Map<String, dynamic>> _currentExpenses = [];
   List<Map<String, dynamic>> _myDebts = [];
   List<Map<String, dynamic>> _notifications = [];
+  List<Map<String, dynamic>> _recentActivity = [];
   bool _isLoading = false;
   String? _error;
 
@@ -35,6 +36,7 @@ class AppProvider extends ChangeNotifier {
   List<Map<String, dynamic>> get currentExpenses => _currentExpenses;
   List<Map<String, dynamic>> get myDebts => _myDebts;
   List<Map<String, dynamic>> get notifications => _notifications;
+  List<Map<String, dynamic>> get recentActivity => _recentActivity; // ADDED
   bool get isLoading => _isLoading;
   String? get error => _error;
   bool get isLoggedIn => supabase.auth.currentUser != null;
@@ -58,23 +60,18 @@ class AppProvider extends ChangeNotifier {
     _isLoading = true;
     _error = null;
     notifyListeners();
-    try {
-      final results = await Future.wait([
-        _auth.getProfile(),
-        _groups.getMyGroups(),
-        _debts.getMyDebts(),
-        _notifs.getNotifications(),
-      ]);
-      _profile = results[0] as Map<String, dynamic>;
-      _myGroups = results[1] as List<Map<String, dynamic>>;
-      _myDebts = results[2] as List<Map<String, dynamic>>;
-      _notifications = results[3] as List<Map<String, dynamic>>;
-    } catch (e) {
-      _error = e.toString();
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
+    final results = await Future.wait([
+      _auth.getProfile(),
+      _groups.getMyGroups(),
+      _debts.getMyDebts(),
+      _notifs.getNotifications(),
+      _exps.getRecentActivity(),
+    ]);
+    _profile = results[0] as Map<String, dynamic>;
+    _myGroups = results[1] as List<Map<String, dynamic>>;
+    _myDebts = results[2] as List<Map<String, dynamic>>;
+    _notifications = results[3] as List<Map<String, dynamic>>;
+    _recentActivity = results[4] as List<Map<String, dynamic>>;
   }
 
   // =========== SUBSCRIPTION ===========
@@ -116,6 +113,7 @@ class AppProvider extends ChangeNotifier {
     _currentExpenses = [];
     _myDebts = [];
     _notifications = [];
+    _recentActivity = [];
     notifyListeners();
   }
 
@@ -164,7 +162,15 @@ class AppProvider extends ChangeNotifier {
 
   Future<Map<String, dynamic>?> findUserByEmail(String email) async => await _groups.findUserByEmail(email);
 
+  Future<Map<String, dynamic>> getGroup(String groupId) async => await _groups.getGroup(groupId);
+
   // =========== EXPENSES ===========
+
+  // ADDED - get expenses for a specific group
+  Future<List<Map<String, dynamic>>> getGroupExpenses(String groupId) async {
+    return await _exps.getGroupExpenses(groupId);
+  }
+
   Future<void> loadGroupExpenses(String groupId, {String? search, String? category}) async {
     _currentExpenses = await _exps.getGroupExpenses(groupId, search: search, category: category);
     notifyListeners();
@@ -192,13 +198,15 @@ class AppProvider extends ChangeNotifier {
     );
     await loadGroupExpenses(groupId);
     _myDebts = await _debts.getMyDebts();
+    _recentActivity = await _exps.getRecentActivity(); // ADDED
     notifyListeners();
   }
 
-  Future<void> deleteExpense(String groupId, String expenseId) async {
+  // FIXED - only takes expenseId, no groupId needed
+  Future<void> deleteExpense(String expenseId) async {
     await _exps.deleteExpense(expenseId);
-    await loadGroupExpenses(groupId);
     _myDebts = await _debts.getMyDebts();
+    _recentActivity = await _exps.getRecentActivity(); // ADDED
     notifyListeners();
   }
 

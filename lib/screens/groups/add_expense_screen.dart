@@ -1,8 +1,15 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+import 'package:image_picker/image_picker.dart';
+import '../../providers/app_provider.dart';
 
 class AddExpenseScreen extends StatefulWidget {
-  const AddExpenseScreen({super.key});
+  final String groupId;
+  final String groupName;
+
+  const AddExpenseScreen({super.key, required this.groupId, required this.groupName});
 
   @override
   State<AddExpenseScreen> createState() => _AddExpenseScreenState();
@@ -11,23 +18,138 @@ class AddExpenseScreen extends StatefulWidget {
 class _AddExpenseScreenState extends State<AddExpenseScreen> {
   final TextEditingController _descriptionController = TextEditingController();
   final TextEditingController _amountController = TextEditingController();
-  final TextEditingController _dateController = TextEditingController();
-  final TextEditingController _statusController = TextEditingController();
 
-  String _selectedPayer = 'Micah Lapuz';
-  String _selectedSplit = 'All Members (2)';
+  String? _selectedPayerId;
+  String? _selectedPayerName;
+  List<Map<String, dynamic>> _members = [];
+  List<String> _selectedSplitIds = [];
+  bool _splitAll = true;
+  DateTime _selectedDate = DateTime.now();
+  File? _receiptFile;
+  bool _isLoading = false;
+  bool _loadingMembers = true;
 
-  // TODO: fetch actual group members from Supabase for dropdowns
-  final List<String> _payers = ['Micah Lapuz', 'Maxene Quiambao'];
-  final List<String> _splitOptions = ['All Members (2)', 'Select Members'];
+  @override
+  void initState() {
+    super.initState();
+    _loadMembers();
+  }
 
   @override
   void dispose() {
     _descriptionController.dispose();
     _amountController.dispose();
-    _dateController.dispose();
-    _statusController.dispose();
     super.dispose();
+  }
+
+  // Load real group members from Supabase
+  Future<void> _loadMembers() async {
+    try {
+      final group = await context.read<AppProvider>().getGroup(widget.groupId);
+      final members =
+          (group['members'] as List?)
+              ?.map((m) => m['user'] as Map<String, dynamic>)
+              .where((u) => u['id'] != null)
+              .toList() ??
+          [];
+
+      final currentUserId = context.read<AppProvider>().profile?['id'] as String?;
+
+      setState(() {
+        _members = members;
+        _selectedSplitIds = members.map((m) => m['id'] as String).toList();
+        // Default payer = current user
+        final me = members.firstWhere(
+          (m) => m['id'] == currentUserId,
+          orElse: () => members.isNotEmpty ? members[0] : {},
+        );
+        if (me.isNotEmpty) {
+          _selectedPayerId = me['id'] as String;
+          _selectedPayerName = me['name'] as String?;
+        }
+        _loadingMembers = false;
+      });
+    } catch (e) {
+      if (mounted) setState(() => _loadingMembers = false);
+    }
+  }
+
+  Future<void> _pickDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now(),
+      builder: (context, child) => Theme(
+        data: Theme.of(context).copyWith(colorScheme: const ColorScheme.light(primary: Color(0xFF0663FF))),
+        child: child!,
+      ),
+    );
+    if (picked != null) setState(() => _selectedDate = picked);
+  }
+
+  Future<void> _pickReceipt() async {
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(source: ImageSource.gallery);
+    if (picked != null) setState(() => _receiptFile = File(picked.path));
+  }
+
+  Future<void> _addExpense() async {
+    if (_descriptionController.text.trim().isEmpty) {
+      _showError('Please enter a description');
+      return;
+    }
+    final amount = double.tryParse(_amountController.text.trim());
+    if (amount == null || amount <= 0) {
+      _showError('Please enter a valid amount');
+      return;
+    }
+    if (_selectedPayerId == null) {
+      _showError('Please select who paid');
+      return;
+    }
+    if (_selectedSplitIds.isEmpty) {
+      _showError('Please select at least one person to split with');
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      await context.read<AppProvider>().addExpense(
+        groupId: widget.groupId,
+        description: _descriptionController.text.trim(),
+        amount: amount,
+        paidByUserId: _selectedPayerId!,
+        splitBetween: _selectedSplitIds,
+        category: 'general',
+        date: _selectedDate,
+        receiptFile: _receiptFile,
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Expense added! 🎉', style: GoogleFonts.montserrat()),
+            backgroundColor: Colors.green,
+          ),
+        );
+        Navigator.pop(context, true); // returns true to trigger refresh
+      }
+    } catch (e) {
+      if (mounted) _showError(e.toString().replaceAll('Exception: ', ''));
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  void _showError(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg, style: GoogleFonts.montserrat()),
+        backgroundColor: Colors.red,
+      ),
+    );
   }
 
   @override
@@ -38,114 +160,275 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
         children: [
           _buildHeader(context),
           Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 28),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildLabel('Description*'),
-                  const SizedBox(height: 8),
-                  _buildTextField(_descriptionController),
-                  const SizedBox(height: 20),
+            child: _loadingMembers
+                ? const Center(child: CircularProgressIndicator())
+                : SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 28),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildLabel('Description*'),
+                        const SizedBox(height: 8),
+                        _buildTextField(_descriptionController, hint: 'e.g. Dinner, Groceries'),
+                        const SizedBox(height: 20),
 
-                  _buildLabel('Amount*'),
-                  const SizedBox(height: 8),
-                  _buildTextField(
-                    _amountController,
-                    keyboardType: TextInputType.number,
-                  ),
-                  const SizedBox(height: 20),
+                        _buildLabel('Amount*'),
+                        const SizedBox(height: 8),
+                        _buildTextField(
+                          _amountController,
+                          hint: '0.00',
+                          keyboardType: TextInputType.number,
+                          prefix: 'PHP ',
+                        ),
+                        const SizedBox(height: 20),
 
-                  _buildLabel('Who Paid*'),
-                  const SizedBox(height: 8),
-                  _buildDropdown(
-                    value: _selectedPayer,
-                    items: _payers,
-                    onChanged: (val) => setState(() => _selectedPayer = val!),
-                  ),
-                  const SizedBox(height: 20),
+                        // Who Paid - real members dropdown
+                        _buildLabel('Who Paid*'),
+                        const SizedBox(height: 8),
+                        _buildMemberDropdown(),
+                        const SizedBox(height: 20),
 
-                  _buildLabel('Split Between*'),
-                  const SizedBox(height: 8),
-                  _buildDropdown(
-                    value: _selectedSplit,
-                    items: _splitOptions,
-                    onChanged: (val) => setState(() => _selectedSplit = val!),
-                  ),
-                  const SizedBox(height: 20),
+                        // Split Between - real members checkboxes
+                        _buildLabel('Split Between*'),
+                        const SizedBox(height: 8),
+                        _buildSplitSection(),
+                        const SizedBox(height: 20),
 
-                  _buildLabel('Date'),
-                  const SizedBox(height: 8),
-                  _buildTextField(_dateController),
-                  const SizedBox(height: 20),
+                        // Date picker
+                        _buildLabel('Date'),
+                        const SizedBox(height: 8),
+                        GestureDetector(
+                          onTap: _pickDate,
+                          child: Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: const Color(0xFFD0D0D0), width: 1),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  '${_selectedDate.month.toString().padLeft(2, '0')}/${_selectedDate.day.toString().padLeft(2, '0')}/${_selectedDate.year}',
+                                  style: GoogleFonts.montserrat(fontSize: 13, color: const Color(0xFF2C2C2C)),
+                                ),
+                                const Icon(Icons.calendar_today_outlined, color: Color(0xFF9E9E9E), size: 18),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 20),
 
-                  _buildLabel('Status'),
-                  const SizedBox(height: 8),
-                  _buildTextField(_statusController),
-                  const SizedBox(height: 20),
+                        // Receipt upload
+                        _buildLabel('Upload Image Receipt'),
+                        const SizedBox(height: 8),
+                        GestureDetector(
+                          onTap: _pickReceipt,
+                          child: Container(
+                            width: double.infinity,
+                            height: 110,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(10),
+                              color: const Color(0xFFF5F5F5),
+                            ),
+                            child: _receiptFile != null
+                                ? ClipRRect(
+                                    borderRadius: BorderRadius.circular(10),
+                                    child: Image.file(_receiptFile!, fit: BoxFit.cover),
+                                  )
+                                : CustomPaint(
+                                    painter: _DashedBorderPainter(),
+                                    child: Center(
+                                      child: Column(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          const Icon(Icons.upload_outlined, color: Color(0xFF9E9E9E), size: 28),
+                                          const SizedBox(height: 6),
+                                          Text(
+                                            'Tap to upload receipt',
+                                            style: GoogleFonts.montserrat(fontSize: 12, color: const Color(0xFF9E9E9E)),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                          ),
+                        ),
+                        const SizedBox(height: 28),
 
-                  _buildLabel('Upload Image Receipt'),
-                  const SizedBox(height: 8),
-                  // TODO: implement image_picker for receipt upload
-                  Container(
-                    width: double.infinity,
-                    height: 110,
-                    child: CustomPaint(
-                      painter: _DashedBorderPainter(),
-                    ),
-                  ),
-                  const SizedBox(height: 28),
-
-                  Container(
-                    width: double.infinity,
-                    height: 52,
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF0663FF), Color(0xFF003CC1)],
-                        begin: Alignment.centerLeft,
-                        end: Alignment.centerRight,
-                      ),
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFF0663FF).withOpacity(0.3),
-                          blurRadius: 12,
-                          offset: const Offset(0, 6),
+                        // Add Expense button
+                        Container(
+                          width: double.infinity,
+                          height: 52,
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFF0663FF), Color(0xFF003CC1)],
+                              begin: Alignment.centerLeft,
+                              end: Alignment.centerRight,
+                            ),
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFF0663FF).withOpacity(0.3),
+                                blurRadius: 12,
+                                offset: const Offset(0, 6),
+                              ),
+                            ],
+                          ),
+                          child: Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              onTap: _isLoading ? null : _addExpense,
+                              borderRadius: BorderRadius.circular(12),
+                              child: Center(
+                                child: _isLoading
+                                    ? const SizedBox(
+                                        height: 20,
+                                        width: 20,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                        ),
+                                      )
+                                    : Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          const Icon(Icons.add_circle_outline, color: Colors.white, size: 20),
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            'Add Expense',
+                                            style: GoogleFonts.montserrat(
+                                              fontSize: 15,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                              ),
+                            ),
+                          ),
                         ),
                       ],
                     ),
-                    child: Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        // TODO: implement add expense backend logic
-                        onTap: () => Navigator.pop(context),
-                        borderRadius: BorderRadius.circular(12),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(
-                              Icons.add_circle_outline,
-                              color: Colors.white,
-                              size: 20,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Add Expense',
-                              style: GoogleFonts.montserrat(
-                                fontSize: 15,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Real members dropdown for "Who Paid"
+  Widget _buildMemberDropdown() {
+    if (_members.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: const Color(0xFFD0D0D0)),
+        ),
+        child: Text('No members found', style: GoogleFonts.montserrat(fontSize: 13, color: const Color(0xFF9E9E9E))),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFFD0D0D0), width: 1),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: _selectedPayerId,
+          isExpanded: true,
+          dropdownColor: const Color(0xFFE8F4FF),
+          icon: const Icon(Icons.arrow_drop_down, color: Color(0xFF9E9E9E)),
+          style: GoogleFonts.montserrat(fontSize: 13, color: const Color(0xFF2C2C2C)),
+          items: _members.map((member) {
+            return DropdownMenuItem<String>(
+              value: member['id'] as String,
+              child: Row(
+                children: [
+                  Container(
+                    width: 10,
+                    height: 10,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: const Color(0xFF0663FF), width: 2),
                     ),
                   ),
+                  const SizedBox(width: 10),
+                  Text(member['name'] ?? 'Unknown', style: GoogleFonts.montserrat(fontSize: 13)),
                 ],
               ),
-            ),
+            );
+          }).toList(),
+          onChanged: (val) {
+            final member = _members.firstWhere((m) => m['id'] == val);
+            setState(() {
+              _selectedPayerId = val;
+              _selectedPayerName = member['name'] as String?;
+            });
+          },
+        ),
+      ),
+    );
+  }
+
+  // Checkboxes for split between
+  Widget _buildSplitSection() {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFFD0D0D0), width: 1),
+      ),
+      child: Column(
+        children: [
+          // Select All toggle
+          Row(
+            children: [
+              Checkbox(
+                value: _splitAll,
+                activeColor: const Color(0xFF0663FF),
+                onChanged: (val) {
+                  setState(() {
+                    _splitAll = val ?? true;
+                    _selectedSplitIds = _splitAll ? _members.map((m) => m['id'] as String).toList() : [];
+                  });
+                },
+              ),
+              Text('All Members', style: GoogleFonts.montserrat(fontSize: 13, fontWeight: FontWeight.w600)),
+            ],
           ),
+          const Divider(height: 1),
+          ..._members.map((member) {
+            final id = member['id'] as String;
+            final isSelected = _selectedSplitIds.contains(id);
+            return Row(
+              children: [
+                Checkbox(
+                  value: isSelected,
+                  activeColor: const Color(0xFF0663FF),
+                  onChanged: (val) {
+                    setState(() {
+                      if (val == true) {
+                        _selectedSplitIds.add(id);
+                      } else {
+                        _selectedSplitIds.remove(id);
+                      }
+                      _splitAll = _selectedSplitIds.length == _members.length;
+                    });
+                  },
+                ),
+                Text(member['name'] ?? 'Unknown', style: GoogleFonts.montserrat(fontSize: 13)),
+              ],
+            );
+          }),
         ],
       ),
     );
@@ -158,10 +441,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
         gradient: LinearGradient(
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
-          colors: [
-            Color(0xFF0663FF),
-            Color(0xFF003CC1),
-          ],
+          colors: [Color(0xFF0663FF), Color(0xFF003CC1)],
         ),
       ),
       child: SafeArea(
@@ -175,20 +455,12 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Add New Expense',
-                    style: GoogleFonts.montserrat(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
+                    'Add Expense · ${widget.groupName}',
+                    style: GoogleFonts.montserrat(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
                   ),
                   InkWell(
                     onTap: () => Navigator.pop(context),
-                    child: const Icon(
-                      Icons.close,
-                      color: Colors.white,
-                      size: 28,
-                    ),
+                    child: const Icon(Icons.close, color: Colors.white, size: 28),
                   ),
                 ],
               ),
@@ -203,30 +475,28 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
   Widget _buildLabel(String label) {
     return Text(
       label,
-      style: GoogleFonts.montserrat(
-        fontSize: 13,
-        fontWeight: FontWeight.bold,
-        color: const Color(0xFF2C2C2C),
-      ),
+      style: GoogleFonts.montserrat(fontSize: 13, fontWeight: FontWeight.bold, color: const Color(0xFF2C2C2C)),
     );
   }
 
   Widget _buildTextField(
     TextEditingController controller, {
     TextInputType keyboardType = TextInputType.text,
+    String hint = '',
+    String prefix = '',
   }) {
     return TextField(
       controller: controller,
       keyboardType: keyboardType,
-      style: GoogleFonts.montserrat(
-        fontSize: 13,
-        color: const Color(0xFF2C2C2C),
-      ),
+      style: GoogleFonts.montserrat(fontSize: 13, color: const Color(0xFF2C2C2C)),
       decoration: InputDecoration(
+        hintText: hint,
+        hintStyle: GoogleFonts.montserrat(fontSize: 13, color: const Color(0xFF9E9E9E)),
+        prefixText: prefix,
+        prefixStyle: GoogleFonts.montserrat(fontSize: 13, color: const Color(0xFF2C2C2C)),
         filled: true,
         fillColor: Colors.white,
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
           borderSide: const BorderSide(color: Color(0xFFD0D0D0), width: 1),
@@ -238,57 +508,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
       ),
     );
   }
-
-  Widget _buildDropdown({
-    required String value,
-    required List<String> items,
-    required ValueChanged<String?> onChanged,
-  }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFFD0D0D0), width: 1),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          value: value,
-          isExpanded: true,
-          dropdownColor: const Color(0xFFE8F4FF),
-          icon: const Icon(Icons.arrow_drop_down, color: Color(0xFF9E9E9E)),
-          style: GoogleFonts.montserrat(
-            fontSize: 13,
-            color: const Color(0xFF2C2C2C),
-          ),
-          items: items.map((item) {
-            return DropdownMenuItem<String>(
-  value: item,
-  child: Row(
-    children: [
-      Container(
-        width: 10,
-        height: 10,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          border: Border.all(
-            color: const Color(0xFF0663FF),
-            width: 2,
-          ),
-        ),
-      ),
-      const SizedBox(width: 10),
-      Text(item, style: GoogleFonts.montserrat(fontSize: 13)),
-    ],
-  ),
-);
-          }).toList(),
-          onChanged: onChanged,
-        ),
-      ),
-    );
-  }
-} 
+}
 
 class _DashedBorderPainter extends CustomPainter {
   @override
@@ -310,10 +530,7 @@ class _DashedBorderPainter extends CustomPainter {
       double distance = 0;
       while (distance < metric.length) {
         final next = distance + dashWidth;
-        canvas.drawPath(
-          metric.extractPath(distance, next.clamp(0, metric.length)),
-          paint,
-        );
+        canvas.drawPath(metric.extractPath(distance, next.clamp(0, metric.length)), paint);
         distance += dashWidth + dashSpace;
       }
     }
