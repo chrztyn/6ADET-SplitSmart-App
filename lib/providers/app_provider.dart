@@ -7,6 +7,7 @@ import '../services/expenses_service.dart';
 import '../services/debts_service.dart';
 import '../services/notifications_service.dart';
 import '../services/supabase_client.dart';
+import '../utils/local_notifications_helper.dart';
 
 class AppProvider extends ChangeNotifier {
   // =========== SERVICES ===========
@@ -29,6 +30,10 @@ class AppProvider extends ChangeNotifier {
   // Real-time subscriptions
   StreamSubscription? _debtsSub;
   StreamSubscription? _notifSub;
+  bool _initialized = false;
+
+  // Track latest notification timestamp to detect new arrivals
+  String? _latestNotifTimestamp;
 
   // =========== GETTERS ===========
   Map<String, dynamic>? get profile => _profile;
@@ -36,24 +41,44 @@ class AppProvider extends ChangeNotifier {
   List<Map<String, dynamic>> get currentExpenses => _currentExpenses;
   List<Map<String, dynamic>> get myDebts => _myDebts;
   List<Map<String, dynamic>> get notifications => _notifications;
-  List<Map<String, dynamic>> get recentActivity => _recentActivity; // ADDED
+  List<Map<String, dynamic>> get recentActivity => _recentActivity;
   bool get isLoading => _isLoading;
   String? get error => _error;
   bool get isLoggedIn => supabase.auth.currentUser != null;
 
-  List<Map<String, dynamic>> get pendingDebtsIOwe =>
-      _myDebts.where((d) => d['from_user_id'] == supabase.auth.currentUser?.id && d['status'] == 'pending').toList();
+  List<Map<String, dynamic>> get pendingDebtsIOwe => _myDebts
+      .where(
+        (d) =>
+            d['from_user_id'] == supabase.auth.currentUser?.id &&
+            d['status'] == 'pending',
+      )
+      .toList();
 
-  List<Map<String, dynamic>> get pendingDebtsOwedToMe =>
-      _myDebts.where((d) => d['to_user_id'] == supabase.auth.currentUser?.id && d['status'] == 'pending').toList();
+  List<Map<String, dynamic>> get pendingDebtsOwedToMe => _myDebts
+      .where(
+        (d) =>
+            d['to_user_id'] == supabase.auth.currentUser?.id &&
+            d['status'] == 'pending',
+      )
+      .toList();
 
-  int get unreadCount => _notifications.where((n) => n['is_read'] == false).length;
+  int get unreadCount =>
+      _notifications.where((n) => n['is_read'] == false).length;
 
   // =========== INIT ===========
   Future<void> init() async {
     if (!isLoggedIn) return;
+    if (_initialized) return;
+    _initialized = true;
     await _loadAll();
     _subscribeRealtime();
+    // Retry loading debts after short delay to ensure auth session
+    // is fully ready before the .or() filter runs
+    await Future.delayed(const Duration(milliseconds: 800));
+    if (isLoggedIn) {
+      _myDebts = await _debts.getMyDebts();
+      notifyListeners();
+    }
   }
 
   Future<void> _loadAll() async {
@@ -72,6 +97,12 @@ class AppProvider extends ChangeNotifier {
     _myDebts = results[2] as List<Map<String, dynamic>>;
     _notifications = results[3] as List<Map<String, dynamic>>;
     _recentActivity = results[4] as List<Map<String, dynamic>>;
+    // Seed the latest timestamp so first realtime update doesn't re-notify
+    if (_notifications.isNotEmpty) {
+      _latestNotifTimestamp = _notifications.first['created_at'] as String?;
+    }
+    _isLoading = false;
+    notifyListeners();
   }
 
   // =========== SUBSCRIPTION ===========
@@ -82,7 +113,29 @@ class AppProvider extends ChangeNotifier {
     });
 
     _notifSub = _notifs.watchNotifications().listen((data) {
-      _notifications = data;
+      // Detect genuinely new notifications and fire OS push notifications
+      if (_latestNotifTimestamp != null) {
+        for (final notif in data) {
+          final t = notif['created_at'] as String? ?? '';
+          if (t.compareTo(_latestNotifTimestamp!) > 0) {
+            LocalNotificationsHelper.showNotification(
+              title: LocalNotificationsHelper.titleForType(
+                notif['type'] as String?,
+              ),
+              body: notif['message'] as String? ?? 'New notification',
+              id: notif['id'].hashCode,
+            );
+          }
+        }
+      }
+      // Only overwrite if stream returned data, to avoid clearing
+      // a valid list on a spurious empty emission at startup
+      if (data.isNotEmpty || _notifications.isEmpty) {
+        _notifications = data;
+      }
+      if (_notifications.isNotEmpty) {
+        _latestNotifTimestamp = _notifications.first['created_at'] as String?;
+      }
       notifyListeners();
     });
   }
@@ -90,25 +143,34 @@ class AppProvider extends ChangeNotifier {
   void _cancelRealtime() {
     _debtsSub?.cancel();
     _notifSub?.cancel();
+    _debtsSub = null;
+    _notifSub = null;
+    try {
+      supabase.removeAllChannels();
+    } catch (_) {}
   }
 
   // =========== AUTHENTICATION ===========
   Future<void> register(String name, String email, String password) async {
     await _auth.register(name: name, email: email, password: password);
+    _initialized = true;
     await _loadAll();
     _subscribeRealtime();
   }
 
   Future<void> login(String email, String password) async {
     await _auth.login(email: email, password: password);
+    _initialized = true;
     await _loadAll();
     _subscribeRealtime();
   }
 
   Future<void> logout() async {
     _cancelRealtime();
+    await Future.delayed(const Duration(milliseconds: 300));
     await _auth.logout();
     _profile = null;
+    _initialized = false;
     _myGroups = [];
     _currentExpenses = [];
     _myDebts = [];
@@ -117,8 +179,17 @@ class AppProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> updateProfile(String name, String email) async {
-    _profile = await _auth.updateProfile(name: name, email: email);
+  Future<void> updateProfile(String name, String email, {String? phone}) async {
+    _profile = await _auth.updateProfile(
+      name: name,
+      email: email,
+      phone: phone,
+    );
+    notifyListeners();
+  }
+
+  Future<void> refreshProfile() async {
+    _profile = await _auth.getProfile();
     notifyListeners();
   }
 
@@ -142,8 +213,16 @@ class AppProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<Map<String, dynamic>> createGroup(String name, String description, List<String> memberEmails) async {
-    final group = await _groups.createGroup(name: name, description: description, memberEmails: memberEmails);
+  Future<Map<String, dynamic>> createGroup(
+    String name,
+    String description,
+    List<String> memberEmails,
+  ) async {
+    final group = await _groups.createGroup(
+      name: name,
+      description: description,
+      memberEmails: memberEmails,
+    );
     await refreshGroups();
     return group;
   }
@@ -158,11 +237,14 @@ class AppProvider extends ChangeNotifier {
     await refreshGroups();
   }
 
-  Future<Map<String, double>> getGroupBalances(String groupId) async => await _groups.getGroupBalances(groupId);
+  Future<Map<String, double>> getGroupBalances(String groupId) async =>
+      await _groups.getGroupBalances(groupId);
 
-  Future<Map<String, dynamic>?> findUserByEmail(String email) async => await _groups.findUserByEmail(email);
+  Future<Map<String, dynamic>?> findUserByEmail(String email) async =>
+      await _groups.findUserByEmail(email);
 
-  Future<Map<String, dynamic>> getGroup(String groupId) async => await _groups.getGroup(groupId);
+  Future<Map<String, dynamic>> getGroup(String groupId) async =>
+      await _groups.getGroup(groupId);
 
   // =========== EXPENSES ===========
 
@@ -171,8 +253,16 @@ class AppProvider extends ChangeNotifier {
     return await _exps.getGroupExpenses(groupId);
   }
 
-  Future<void> loadGroupExpenses(String groupId, {String? search, String? category}) async {
-    _currentExpenses = await _exps.getGroupExpenses(groupId, search: search, category: category);
+  Future<void> loadGroupExpenses(
+    String groupId, {
+    String? search,
+    String? category,
+  }) async {
+    _currentExpenses = await _exps.getGroupExpenses(
+      groupId,
+      search: search,
+      category: category,
+    );
     notifyListeners();
   }
 
@@ -210,22 +300,38 @@ class AppProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<double> getTotalExpenses(String groupId) async => await _exps.getTotalExpenses(groupId);
+  Future<double> getTotalExpenses(String groupId) async =>
+      await _exps.getTotalExpenses(groupId);
 
   // =========== DEBTS ===========
+  Future<List<Map<String, dynamic>>> getMyDebts({String? status}) async =>
+      await _debts.getMyDebts(status: status);
+
   Future<void> refreshDebts() async {
     _myDebts = await _debts.getMyDebts();
     notifyListeners();
   }
 
-  Future<List<Map<String, dynamic>>> getGroupDebts(String groupId) async => await _debts.getGroupDebts(groupId);
+  Future<List<Map<String, dynamic>>> getGroupDebts(String groupId) async =>
+      await _debts.getGroupDebts(groupId);
 
-  Future<void> settleDebt(String debtId, {required String paymentMethod, File? proofFile}) async {
-    await _debts.settleDebt(debtId, paymentMethod: paymentMethod, proofFile: proofFile);
+  Future<void> settleDebt(
+    String debtId, {
+    required String paymentMethod,
+    required double amount,
+    File? proofFile,
+  }) async {
+    await _debts.settleDebt(
+      debtId,
+      paymentMethod: paymentMethod,
+      amount: amount,
+      proofFile: proofFile,
+    );
     await refreshDebts();
   }
 
-  Future<({double iOwe, double owedToMe})> getDebtSummary() async => await _debts.getSummary();
+  Future<({double iOwe, double owedToMe})> getDebtSummary() async =>
+      await _debts.getSummary();
 
   // =========== NOTIFS ===========
   Future<void> markAllNotificationsRead() async {

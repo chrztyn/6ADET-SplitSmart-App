@@ -9,7 +9,11 @@ class AddExpenseScreen extends StatefulWidget {
   final String groupId;
   final String groupName;
 
-  const AddExpenseScreen({super.key, required this.groupId, required this.groupName});
+  const AddExpenseScreen({
+    super.key,
+    required this.groupId,
+    required this.groupName,
+  });
 
   @override
   State<AddExpenseScreen> createState() => _AddExpenseScreenState();
@@ -28,6 +32,15 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
   File? _receiptFile;
   bool _isLoading = false;
   bool _loadingMembers = true;
+  String _selectedCategory = 'food';
+  final List<String> _categories = [
+    'food',
+    'rent',
+    'transport',
+    'utilities',
+    'entertainment',
+    'other',
+  ];
 
   @override
   void initState() {
@@ -42,10 +55,10 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
     super.dispose();
   }
 
-  // Load real group members from Supabase
   Future<void> _loadMembers() async {
     try {
-      final group = await context.read<AppProvider>().getGroup(widget.groupId);
+      final provider = context.read<AppProvider>();
+      final group = await provider.getGroup(widget.groupId);
       final members =
           (group['members'] as List?)
               ?.map((m) => m['user'] as Map<String, dynamic>)
@@ -53,15 +66,28 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
               .toList() ??
           [];
 
-      final currentUserId = context.read<AppProvider>().profile?['id'] as String?;
+      final currentUserId = provider.profile?['id'] as String?;
+      final currentUserName = provider.profile?['name'] as String?;
+
+      // Patch current user's name using the resolved provider name when
+      // profiles.name is null (e.g. name was only stored in user_metadata)
+      final patchedMembers = members.map((m) {
+        if (m['id'] == currentUserId &&
+            (m['name'] == null || (m['name'] as String).trim().isEmpty)) {
+          return {...m, 'name': currentUserName};
+        }
+        return m;
+      }).toList();
 
       setState(() {
-        _members = members;
-        _selectedSplitIds = members.map((m) => m['id'] as String).toList();
+        _members = patchedMembers;
+        _selectedSplitIds = patchedMembers
+            .map((m) => m['id'] as String)
+            .toList();
         // Default payer = current user
-        final me = members.firstWhere(
+        final me = patchedMembers.firstWhere(
           (m) => m['id'] == currentUserId,
-          orElse: () => members.isNotEmpty ? members[0] : {},
+          orElse: () => patchedMembers.isNotEmpty ? patchedMembers[0] : {},
         );
         if (me.isNotEmpty) {
           _selectedPayerId = me['id'] as String;
@@ -81,7 +107,9 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
       firstDate: DateTime(2020),
       lastDate: DateTime.now(),
       builder: (context, child) => Theme(
-        data: Theme.of(context).copyWith(colorScheme: const ColorScheme.light(primary: Color(0xFF0663FF))),
+        data: Theme.of(context).copyWith(
+          colorScheme: const ColorScheme.light(primary: Color(0xFF0663FF)),
+        ),
         child: child!,
       ),
     );
@@ -122,7 +150,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
         amount: amount,
         paidByUserId: _selectedPayerId!,
         splitBetween: _selectedSplitIds,
-        category: 'general',
+        category: _selectedCategory,
         date: _selectedDate,
         receiptFile: _receiptFile,
       );
@@ -163,13 +191,19 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
             child: _loadingMembers
                 ? const Center(child: CircularProgressIndicator())
                 : SingleChildScrollView(
-                    padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 28),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 28,
+                      vertical: 28,
+                    ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         _buildLabel('Description*'),
                         const SizedBox(height: 8),
-                        _buildTextField(_descriptionController, hint: 'e.g. Dinner, Groceries'),
+                        _buildTextField(
+                          _descriptionController,
+                          hint: 'e.g. Dinner, Groceries',
+                        ),
                         const SizedBox(height: 20),
 
                         _buildLabel('Amount*'),
@@ -182,46 +216,60 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                         ),
                         const SizedBox(height: 20),
 
-                        // Who Paid - real members dropdown
                         _buildLabel('Who Paid*'),
                         const SizedBox(height: 8),
                         _buildMemberDropdown(),
                         const SizedBox(height: 20),
 
-                        // Split Between - real members checkboxes
                         _buildLabel('Split Between*'),
                         const SizedBox(height: 8),
                         _buildSplitSection(),
                         const SizedBox(height: 20),
 
-                        // Date picker
+                        _buildLabel('Category'),
+                        const SizedBox(height: 8),
+                        _buildCategoryDropdown(),
+                        const SizedBox(height: 20),
+
                         _buildLabel('Date'),
                         const SizedBox(height: 8),
                         GestureDetector(
                           onTap: _pickDate,
                           child: Container(
                             width: double.infinity,
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 14,
+                            ),
                             decoration: BoxDecoration(
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(10),
-                              border: Border.all(color: const Color(0xFFD0D0D0), width: 1),
+                              border: Border.all(
+                                color: const Color(0xFFD0D0D0),
+                                width: 1,
+                              ),
                             ),
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text(
                                   '${_selectedDate.month.toString().padLeft(2, '0')}/${_selectedDate.day.toString().padLeft(2, '0')}/${_selectedDate.year}',
-                                  style: GoogleFonts.montserrat(fontSize: 13, color: const Color(0xFF2C2C2C)),
+                                  style: GoogleFonts.montserrat(
+                                    fontSize: 13,
+                                    color: const Color(0xFF2C2C2C),
+                                  ),
                                 ),
-                                const Icon(Icons.calendar_today_outlined, color: Color(0xFF9E9E9E), size: 18),
+                                const Icon(
+                                  Icons.calendar_today_outlined,
+                                  color: Color(0xFF9E9E9E),
+                                  size: 18,
+                                ),
                               ],
                             ),
                           ),
                         ),
                         const SizedBox(height: 20),
 
-                        // Receipt upload
                         _buildLabel('Upload Image Receipt'),
                         const SizedBox(height: 8),
                         GestureDetector(
@@ -236,19 +284,30 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                             child: _receiptFile != null
                                 ? ClipRRect(
                                     borderRadius: BorderRadius.circular(10),
-                                    child: Image.file(_receiptFile!, fit: BoxFit.cover),
+                                    child: Image.file(
+                                      _receiptFile!,
+                                      fit: BoxFit.cover,
+                                    ),
                                   )
                                 : CustomPaint(
                                     painter: _DashedBorderPainter(),
                                     child: Center(
                                       child: Column(
-                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
                                         children: [
-                                          const Icon(Icons.upload_outlined, color: Color(0xFF9E9E9E), size: 28),
+                                          const Icon(
+                                            Icons.upload_outlined,
+                                            color: Color(0xFF9E9E9E),
+                                            size: 28,
+                                          ),
                                           const SizedBox(height: 6),
                                           Text(
                                             'Tap to upload receipt',
-                                            style: GoogleFonts.montserrat(fontSize: 12, color: const Color(0xFF9E9E9E)),
+                                            style: GoogleFonts.montserrat(
+                                              fontSize: 12,
+                                              color: const Color(0xFF9E9E9E),
+                                            ),
                                           ),
                                         ],
                                       ),
@@ -258,7 +317,6 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                         ),
                         const SizedBox(height: 28),
 
-                        // Add Expense button
                         Container(
                           width: double.infinity,
                           height: 52,
@@ -289,13 +347,21 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                                         width: 20,
                                         child: CircularProgressIndicator(
                                           strokeWidth: 2,
-                                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                          valueColor:
+                                              AlwaysStoppedAnimation<Color>(
+                                                Colors.white,
+                                              ),
                                         ),
                                       )
                                     : Row(
-                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
                                         children: [
-                                          const Icon(Icons.add_circle_outline, color: Colors.white, size: 20),
+                                          const Icon(
+                                            Icons.add_circle_outline,
+                                            color: Colors.white,
+                                            size: 20,
+                                          ),
                                           const SizedBox(width: 8),
                                           Text(
                                             'Add Expense',
@@ -320,7 +386,42 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
     );
   }
 
-  // Real members dropdown for "Who Paid"
+  Widget _buildCategoryDropdown() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFFD0D0D0), width: 1),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: _selectedCategory,
+          isExpanded: true,
+          dropdownColor: const Color(0xFFE8F4FF),
+          icon: const Icon(Icons.arrow_drop_down, color: Color(0xFF9E9E9E)),
+          style: GoogleFonts.montserrat(
+            fontSize: 13,
+            color: const Color(0xFF2C2C2C),
+          ),
+          items: _categories.map((cat) {
+            return DropdownMenuItem<String>(
+              value: cat,
+              child: Text(
+                cat[0].toUpperCase() + cat.substring(1),
+                style: GoogleFonts.montserrat(fontSize: 13),
+              ),
+            );
+          }).toList(),
+          onChanged: (val) {
+            setState(() => _selectedCategory = val ?? 'food');
+          },
+        ),
+      ),
+    );
+  }
+
+  // who paid dropdown
   Widget _buildMemberDropdown() {
     if (_members.isEmpty) {
       return Container(
@@ -329,7 +430,13 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
           borderRadius: BorderRadius.circular(10),
           border: Border.all(color: const Color(0xFFD0D0D0)),
         ),
-        child: Text('No members found', style: GoogleFonts.montserrat(fontSize: 13, color: const Color(0xFF9E9E9E))),
+        child: Text(
+          'No members found',
+          style: GoogleFonts.montserrat(
+            fontSize: 13,
+            color: const Color(0xFF9E9E9E),
+          ),
+        ),
       );
     }
 
@@ -346,7 +453,10 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
           isExpanded: true,
           dropdownColor: const Color(0xFFE8F4FF),
           icon: const Icon(Icons.arrow_drop_down, color: Color(0xFF9E9E9E)),
-          style: GoogleFonts.montserrat(fontSize: 13, color: const Color(0xFF2C2C2C)),
+          style: GoogleFonts.montserrat(
+            fontSize: 13,
+            color: const Color(0xFF2C2C2C),
+          ),
           items: _members.map((member) {
             return DropdownMenuItem<String>(
               value: member['id'] as String,
@@ -357,11 +467,17 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                     height: 10,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      border: Border.all(color: const Color(0xFF0663FF), width: 2),
+                      border: Border.all(
+                        color: const Color(0xFF0663FF),
+                        width: 2,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 10),
-                  Text(member['name'] ?? 'Unknown', style: GoogleFonts.montserrat(fontSize: 13)),
+                  Text(
+                    member['name'] ?? 'Unknown',
+                    style: GoogleFonts.montserrat(fontSize: 13),
+                  ),
                 ],
               ),
             );
@@ -378,7 +494,6 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
     );
   }
 
-  // Checkboxes for split between
   Widget _buildSplitSection() {
     return Container(
       padding: const EdgeInsets.all(14),
@@ -389,7 +504,6 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
       ),
       child: Column(
         children: [
-          // Select All toggle
           Row(
             children: [
               Checkbox(
@@ -398,11 +512,19 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                 onChanged: (val) {
                   setState(() {
                     _splitAll = val ?? true;
-                    _selectedSplitIds = _splitAll ? _members.map((m) => m['id'] as String).toList() : [];
+                    _selectedSplitIds = _splitAll
+                        ? _members.map((m) => m['id'] as String).toList()
+                        : [];
                   });
                 },
               ),
-              Text('All Members', style: GoogleFonts.montserrat(fontSize: 13, fontWeight: FontWeight.w600)),
+              Text(
+                'All Members',
+                style: GoogleFonts.montserrat(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ],
           ),
           const Divider(height: 1),
@@ -425,7 +547,10 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                     });
                   },
                 ),
-                Text(member['name'] ?? 'Unknown', style: GoogleFonts.montserrat(fontSize: 13)),
+                Text(
+                  member['name'] ?? 'Unknown',
+                  style: GoogleFonts.montserrat(fontSize: 13),
+                ),
               ],
             );
           }),
@@ -456,11 +581,19 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                 children: [
                   Text(
                     'Add Expense · ${widget.groupName}',
-                    style: GoogleFonts.montserrat(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+                    style: GoogleFonts.montserrat(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
                   ),
                   InkWell(
                     onTap: () => Navigator.pop(context),
-                    child: const Icon(Icons.close, color: Colors.white, size: 28),
+                    child: const Icon(
+                      Icons.close,
+                      color: Colors.white,
+                      size: 28,
+                    ),
                   ),
                 ],
               ),
@@ -475,7 +608,11 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
   Widget _buildLabel(String label) {
     return Text(
       label,
-      style: GoogleFonts.montserrat(fontSize: 13, fontWeight: FontWeight.bold, color: const Color(0xFF2C2C2C)),
+      style: GoogleFonts.montserrat(
+        fontSize: 13,
+        fontWeight: FontWeight.bold,
+        color: const Color(0xFF2C2C2C),
+      ),
     );
   }
 
@@ -488,15 +625,27 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
     return TextField(
       controller: controller,
       keyboardType: keyboardType,
-      style: GoogleFonts.montserrat(fontSize: 13, color: const Color(0xFF2C2C2C)),
+      style: GoogleFonts.montserrat(
+        fontSize: 13,
+        color: const Color(0xFF2C2C2C),
+      ),
       decoration: InputDecoration(
         hintText: hint,
-        hintStyle: GoogleFonts.montserrat(fontSize: 13, color: const Color(0xFF9E9E9E)),
+        hintStyle: GoogleFonts.montserrat(
+          fontSize: 13,
+          color: const Color(0xFF9E9E9E),
+        ),
         prefixText: prefix,
-        prefixStyle: GoogleFonts.montserrat(fontSize: 13, color: const Color(0xFF2C2C2C)),
+        prefixStyle: GoogleFonts.montserrat(
+          fontSize: 13,
+          color: const Color(0xFF2C2C2C),
+        ),
         filled: true,
         fillColor: Colors.white,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 14,
+          vertical: 14,
+        ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
           borderSide: const BorderSide(color: Color(0xFFD0D0D0), width: 1),
@@ -530,7 +679,10 @@ class _DashedBorderPainter extends CustomPainter {
       double distance = 0;
       while (distance < metric.length) {
         final next = distance + dashWidth;
-        canvas.drawPath(metric.extractPath(distance, next.clamp(0, metric.length)), paint);
+        canvas.drawPath(
+          metric.extractPath(distance, next.clamp(0, metric.length)),
+          paint,
+        );
         distance += dashWidth + dashSpace;
       }
     }

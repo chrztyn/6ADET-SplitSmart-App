@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:provider/provider.dart';
 import 'login_screen.dart';
+import '../dashboard_screen.dart';
+import '../../providers/app_provider.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -10,7 +13,8 @@ class RegisterScreen extends StatefulWidget {
   State<RegisterScreen> createState() => _RegisterScreenState();
 }
 
-class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProviderStateMixin {
+class _RegisterScreenState extends State<RegisterScreen>
+    with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final _fullNameController = TextEditingController();
   final _emailController = TextEditingController();
@@ -27,13 +31,13 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
       vsync: this,
       duration: const Duration(milliseconds: 600),
     );
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 1),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeOutCubic,
-    ));
+    _slideAnimation = Tween<Offset>(begin: const Offset(0, 1), end: Offset.zero)
+        .animate(
+          CurvedAnimation(
+            parent: _animationController,
+            curve: Curves.easeOutCubic,
+          ),
+        );
     _animationController.forward();
   }
 
@@ -62,7 +66,9 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
         if (response.user != null) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Registration successful! Please check your email for verification.'),
+              content: Text(
+                'Registration successful! Please check your email for verification.',
+              ),
             ),
           );
           Navigator.of(context).pop();
@@ -77,7 +83,10 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
     } catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Unexpected error: $error'), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text('Unexpected error: $error'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     } finally {
@@ -89,22 +98,17 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        // Same background gradient as landing page
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [
-              Color(0xFFF6FAFC),
-              Color(0xFFDCF2FF),
-              Color(0xFFB4E4FF),
-            ],
+            colors: [Color(0xFFF6FAFC), Color(0xFFDCF2FF), Color(0xFFB4E4FF)],
           ),
         ),
         child: SafeArea(
+          bottom: false,
           child: Stack(
             children: [
-              // Back button - outside card
               Positioned(
                 top: 16,
                 left: 16,
@@ -112,7 +116,10 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
                   onTap: () => Navigator.of(context).pop(),
                   borderRadius: BorderRadius.circular(12),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 8,
+                    ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -135,8 +142,7 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
                   ),
                 ),
               ),
-              
-              // White card that slides up
+
               SlideTransition(
                 position: _slideAnimation,
                 child: Align(
@@ -158,15 +164,19 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
                       ],
                     ),
                     child: SingleChildScrollView(
-                      padding: const EdgeInsets.all(32),
+                      padding: EdgeInsets.fromLTRB(
+                        32,
+                        32,
+                        32,
+                        32 + MediaQuery.of(context).padding.bottom,
+                      ),
                       child: Form(
                         key: _formKey,
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             const SizedBox(height: 8),
-                            
-                            // Header Section
+
                             Text(
                               'Get Started',
                               style: GoogleFonts.montserrat(
@@ -186,8 +196,7 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
                               textAlign: TextAlign.center,
                             ),
                             const SizedBox(height: 40),
-                            
-                            // Full Name Field
+
                             Text(
                               'Full Name',
                               style: GoogleFonts.montserrat(
@@ -249,8 +258,7 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
                               },
                             ),
                             const SizedBox(height: 20),
-                            
-                            // Email Field
+
                             Text(
                               'Email',
                               style: GoogleFonts.montserrat(
@@ -316,8 +324,7 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
                               },
                             ),
                             const SizedBox(height: 20),
-                            
-                            // Password Field
+
                             Text(
                               'Password',
                               style: GoogleFonts.montserrat(
@@ -372,11 +379,15 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
                                 ),
                                 suffixIcon: IconButton(
                                   icon: Icon(
-                                    _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                                    _obscurePassword
+                                        ? Icons.visibility_off
+                                        : Icons.visibility,
                                     color: const Color(0xFF9CA3AF),
                                     size: 18,
                                   ),
-                                  onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                                  onPressed: () => setState(
+                                    () => _obscurePassword = !_obscurePassword,
+                                  ),
                                 ),
                               ),
                               obscureText: _obscurePassword,
@@ -391,8 +402,7 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
                               },
                             ),
                             const SizedBox(height: 32),
-                            
-                            // Sign Up Button
+
                             GestureDetector(
                               onTap: _isLoading ? null : _signUp,
                               child: Container(
@@ -407,7 +417,9 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
                                   borderRadius: BorderRadius.circular(12),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: const Color(0xFF075EFB).withOpacity(0.3),
+                                      color: const Color(
+                                        0xFF075EFB,
+                                      ).withOpacity(0.3),
                                       blurRadius: 15,
                                       offset: const Offset(0, 8),
                                     ),
@@ -420,7 +432,10 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
                                           width: 18,
                                           child: CircularProgressIndicator(
                                             strokeWidth: 2,
-                                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                            valueColor:
+                                                AlwaysStoppedAnimation<Color>(
+                                                  Colors.white,
+                                                ),
                                           ),
                                         )
                                       : Text(
@@ -435,13 +450,16 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
                               ),
                             ),
                             const SizedBox(height: 32),
-                            
-                            // Divider with text
+
                             Row(
                               children: [
-                                const Expanded(child: Divider(color: Color(0xFFE5E7EB))),
+                                const Expanded(
+                                  child: Divider(color: Color(0xFFE5E7EB)),
+                                ),
                                 Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                  ),
                                   child: Text(
                                     'Sign up with',
                                     style: GoogleFonts.montserrat(
@@ -450,12 +468,13 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
                                     ),
                                   ),
                                 ),
-                                const Expanded(child: Divider(color: Color(0xFFE5E7EB))),
+                                const Expanded(
+                                  child: Divider(color: Color(0xFFE5E7EB)),
+                                ),
                               ],
                             ),
                             const SizedBox(height: 24),
-                            
-                            // Continue with Google Button
+
                             Container(
                               height: 54,
                               decoration: BoxDecoration(
@@ -469,16 +488,45 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
                               child: Material(
                                 color: Colors.transparent,
                                 child: InkWell(
-                                  onTap: () {
-                                    // TODO: Implement Google Sign-In
+                                  onTap: () async {
+                                    try {
+                                      await context
+                                          .read<AppProvider>()
+                                          .signInWithGoogle();
+                                      await context.read<AppProvider>().init();
+                                      if (mounted) {
+                                        Navigator.of(
+                                          context,
+                                        ).pushAndRemoveUntil(
+                                          MaterialPageRoute(
+                                            builder: (_) =>
+                                                const DashboardScreen(),
+                                          ),
+                                          (route) => false,
+                                        );
+                                      }
+                                    } catch (e) {
+                                      if (mounted) {
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          SnackBar(
+                                            content: Text(e.toString()),
+                                            backgroundColor: Colors.red,
+                                          ),
+                                        );
+                                      }
+                                    }
                                   },
                                   borderRadius: BorderRadius.circular(30),
                                   child: Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                    ),
                                     child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
                                       children: [
-                                        // Google logo
                                         Image.asset(
                                           'assets/images/Google.png',
                                           width: 24,
@@ -500,8 +548,7 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
                               ),
                             ),
                             const SizedBox(height: 32),
-                            
-                            // Footer - Sign In Link
+
                             Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
@@ -516,21 +563,37 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
                                   onTap: () {
                                     Navigator.of(context).pushReplacement(
                                       PageRouteBuilder(
-                                        pageBuilder: (context, animation, secondaryAnimation) =>
-                                            const LoginScreen(),
-                                        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                                          return SlideTransition(
-                                            position: Tween<Offset>(
-                                              begin: const Offset(0, 1),
-                                              end: Offset.zero,
-                                            ).animate(CurvedAnimation(
-                                              parent: animation,
-                                              curve: Curves.easeOutCubic,
-                                            )),
-                                            child: child,
-                                          );
-                                        },
-                                        transitionDuration: const Duration(milliseconds: 600),
+                                        pageBuilder:
+                                            (
+                                              context,
+                                              animation,
+                                              secondaryAnimation,
+                                            ) => const LoginScreen(),
+                                        transitionsBuilder:
+                                            (
+                                              context,
+                                              animation,
+                                              secondaryAnimation,
+                                              child,
+                                            ) {
+                                              return SlideTransition(
+                                                position:
+                                                    Tween<Offset>(
+                                                      begin: const Offset(0, 1),
+                                                      end: Offset.zero,
+                                                    ).animate(
+                                                      CurvedAnimation(
+                                                        parent: animation,
+                                                        curve:
+                                                            Curves.easeOutCubic,
+                                                      ),
+                                                    ),
+                                                child: child,
+                                              );
+                                            },
+                                        transitionDuration: const Duration(
+                                          milliseconds: 600,
+                                        ),
                                       ),
                                     );
                                   },

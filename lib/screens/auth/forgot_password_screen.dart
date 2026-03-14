@@ -69,7 +69,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> with Single
         child: SafeArea(
           child: Stack(
             children: [
-              // Back button
               Positioned(
                 top: 16,
                 left: 16,
@@ -97,7 +96,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> with Single
                 ),
               ),
 
-              // Sliding card
               SlideTransition(
                 position: _slideAnimation,
                 child: Align(

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../providers/app_provider.dart';
+import '../../widgets/notification_bell.dart';
 import 'group_expense_screen.dart';
 import 'create_group_screen.dart';
 
@@ -39,7 +40,7 @@ class _GroupListScreenState extends State<GroupListScreen> {
 
   Widget _buildHeader(BuildContext context) {
     return Container(
-      height: 140,
+      height: 170,
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.centerLeft,
@@ -58,16 +59,33 @@ class _GroupListScreenState extends State<GroupListScreen> {
                 children: [
                   Text(
                     ' Group List',
-                    style: GoogleFonts.montserrat(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
-                  ),
-                  InkWell(
-                    onTap: () => Navigator.pop(context),
-                    child: Container(
-                      width: 40,
-                      height: 40,
-                      decoration: const BoxDecoration(color: Colors.transparent, shape: BoxShape.circle),
-                      child: const Icon(Icons.close, color: Colors.white, size: 28),
+                    style: GoogleFonts.montserrat(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
                     ),
+                  ),
+                  Row(
+                    children: [
+                      const NotificationBell(),
+                      const SizedBox(width: 8),
+                      InkWell(
+                        onTap: () => Navigator.pop(context),
+                        child: Container(
+                          width: 40,
+                          height: 40,
+                          decoration: const BoxDecoration(
+                            color: Colors.transparent,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.close,
+                            color: Colors.white,
+                            size: 28,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -79,7 +97,11 @@ class _GroupListScreenState extends State<GroupListScreen> {
     );
   }
 
-  Widget _buildBody(BuildContext context, List<Map<String, dynamic>> groups, AppProvider provider) {
+  Widget _buildBody(
+    BuildContext context,
+    List<Map<String, dynamic>> groups,
+    AppProvider provider,
+  ) {
     return Container(
       color: Colors.white,
       child: provider.isLoading
@@ -89,7 +111,10 @@ class _GroupListScreenState extends State<GroupListScreen> {
               child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 32),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 40,
+                    vertical: 32,
+                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -113,12 +138,21 @@ class _GroupListScreenState extends State<GroupListScreen> {
                             child: Text(
                               'No groups yet.\nTap "Add New Group" to get started!',
                               textAlign: TextAlign.center,
-                              style: GoogleFonts.montserrat(fontSize: 14, color: const Color(0xFF9E9E9E)),
+                              style: GoogleFonts.montserrat(
+                                fontSize: 14,
+                                color: const Color(0xFF9E9E9E),
+                              ),
                             ),
                           ),
                         )
                       else
-                        ...groups.map((group) => _buildGroupCard(context: context, group: group, provider: provider)),
+                        ...groups.map(
+                          (group) => _buildGroupCard(
+                            context: context,
+                            group: group,
+                            provider: provider,
+                          ),
+                        ),
                     ],
                   ),
                 ),
@@ -139,7 +173,11 @@ class _GroupListScreenState extends State<GroupListScreen> {
         ),
         borderRadius: BorderRadius.circular(14),
         boxShadow: [
-          BoxShadow(color: const Color(0xFF0663FF).withOpacity(0.3), blurRadius: 12, offset: const Offset(0, 6)),
+          BoxShadow(
+            color: const Color(0xFF0663FF).withOpacity(0.3),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+          ),
         ],
       ),
       child: Material(
@@ -148,7 +186,9 @@ class _GroupListScreenState extends State<GroupListScreen> {
           onTap: () async {
             final result = await Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => const CreateGroupScreen()),
+              MaterialPageRoute(
+                builder: (context) => const CreateGroupScreen(),
+              ),
             );
             if (result == true && mounted) {
               context.read<AppProvider>().refreshGroups();
@@ -170,7 +210,11 @@ class _GroupListScreenState extends State<GroupListScreen> {
               const SizedBox(width: 12),
               Text(
                 'Add New Group',
-                style: GoogleFonts.montserrat(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white),
+                style: GoogleFonts.montserrat(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
               ),
             ],
           ),
@@ -190,13 +234,24 @@ class _GroupListScreenState extends State<GroupListScreen> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(color: const Color(0xFFE0E0E0), width: 1),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8, offset: const Offset(0, 2))],
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           onTap: () {
-            Navigator.push(context, MaterialPageRoute(builder: (context) => GroupExpenseScreen(group: group)));
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => GroupExpenseScreen(group: group),
+              ),
+            );
           },
           borderRadius: BorderRadius.circular(18),
           child: Padding(
@@ -207,7 +262,6 @@ class _GroupListScreenState extends State<GroupListScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // FIXED - real group name
                       Text(
                         group['name'] ?? 'Group Name',
                         style: GoogleFonts.montserrat(
@@ -218,7 +272,6 @@ class _GroupListScreenState extends State<GroupListScreen> {
                       ),
                       const SizedBox(height: 10),
 
-                      // FIXED - real description
                       Text(
                         group['description'] ?? '',
                         style: GoogleFonts.montserrat(
@@ -229,7 +282,6 @@ class _GroupListScreenState extends State<GroupListScreen> {
                       ),
                       const SizedBox(height: 4),
 
-                      // FIXED - real member count
                       Text(
                         '${group['member_count'] ?? 1} member(s)',
                         style: GoogleFonts.montserrat(
@@ -248,7 +300,12 @@ class _GroupListScreenState extends State<GroupListScreen> {
                     final confirm = await showDialog<bool>(
                       context: context,
                       builder: (ctx) => AlertDialog(
-                        title: Text('Leave Group', style: GoogleFonts.montserrat(fontWeight: FontWeight.bold)),
+                        title: Text(
+                          'Leave Group',
+                          style: GoogleFonts.montserrat(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                         content: Text(
                           'Are you sure you want to leave "${group['name']}"?',
                           style: GoogleFonts.montserrat(),
@@ -256,11 +313,17 @@ class _GroupListScreenState extends State<GroupListScreen> {
                         actions: [
                           TextButton(
                             onPressed: () => Navigator.pop(ctx, false),
-                            child: Text('Cancel', style: GoogleFonts.montserrat()),
+                            child: Text(
+                              'Cancel',
+                              style: GoogleFonts.montserrat(),
+                            ),
                           ),
                           TextButton(
                             onPressed: () => Navigator.pop(ctx, true),
-                            child: Text('Leave', style: GoogleFonts.montserrat(color: Colors.red)),
+                            child: Text(
+                              'Leave',
+                              style: GoogleFonts.montserrat(color: Colors.red),
+                            ),
                           ),
                         ],
                       ),
@@ -271,7 +334,11 @@ class _GroupListScreenState extends State<GroupListScreen> {
                   },
                   child: Container(
                     padding: const EdgeInsets.all(8),
-                    child: const Icon(Icons.exit_to_app, color: Color(0xFFEF5350), size: 26),
+                    child: const Icon(
+                      Icons.exit_to_app,
+                      color: Color(0xFFEF5350),
+                      size: 26,
+                    ),
                   ),
                 ),
               ],

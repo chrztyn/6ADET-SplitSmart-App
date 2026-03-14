@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../providers/app_provider.dart';
+import '../../widgets/notification_bell.dart';
+import '../profile_screen.dart';
 
 class ReportOverviewScreen extends StatefulWidget {
   const ReportOverviewScreen({super.key});
@@ -11,36 +14,75 @@ class ReportOverviewScreen extends StatefulWidget {
 }
 
 class _ReportOverviewScreenState extends State<ReportOverviewScreen> {
+  List<Map<String, dynamic>> youOwe = [];
+  List<Map<String, dynamic>> owesYou = [];
+  bool _isLoading = true;
 
-  final List<Map<String, dynamic>> youOwe = [
-    {
-      'expense': 'Expense Name',
-      'person': 'Firstname Lastname',
-      'amount': 0.00,
-      'status': 'all paid'
-    },
-    {
-      'expense': 'Expense Name',
-      'person': 'Firstname Lastname',
-      'amount': 0.00,
-      'status': 'to pay'
-    },
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _loadDebts();
+  }
 
-  final List<Map<String, dynamic>> owesYou = [
-    {
-      'expense': 'Expense Name',
-      'person': 'Firstname Lastname',
-      'amount': 0.00,
-      'status': 'all paid'
-    },
-    {
-      'expense': 'Expense Name',
-      'person': 'Firstname Lastname',
-      'amount': 0.00,
-      'status': 'pending'
-    },
-  ];
+  Future<void> _loadDebts() async {
+    setState(() => _isLoading = true);
+    try {
+      final provider = context.read<AppProvider>();
+      final currentUserId = Supabase.instance.client.auth.currentUser?.id;
+      if (currentUserId == null) return;
+
+      await provider.refreshDebts();
+      final allDebts = provider.myDebts;
+
+      if (mounted) {
+        setState(() {
+          youOwe = allDebts
+              .where((d) => d['from_user_id'] == currentUserId)
+              .map(
+                (d) => {
+                  'expense':
+                      (d['expense'] as Map?)?['description'] ?? 'Expense',
+                  'person': (d['to_user'] as Map?)?['name'] ?? 'Unknown',
+                  'amount':
+                      ((d['amount'] as num?)?.toDouble() ?? 0.0) -
+                      ((d['paid_amount'] as num?)?.toDouble() ?? 0.0),
+                  'status': d['status'] == 'settled' ? 'all paid' : 'to pay',
+                },
+              )
+              .toList();
+
+          owesYou = allDebts
+              .where((d) => d['to_user_id'] == currentUserId)
+              .map(
+                (d) => {
+                  'expense':
+                      (d['expense'] as Map?)?['description'] ?? 'Expense',
+                  'person': (d['from_user'] as Map?)?['name'] ?? 'Unknown',
+                  'amount':
+                      ((d['amount'] as num?)?.toDouble() ?? 0.0) -
+                      ((d['paid_amount'] as num?)?.toDouble() ?? 0.0),
+                  'status': d['status'] == 'settled' ? 'all paid' : 'pending',
+                },
+              )
+              .toList();
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Failed to load report: $e',
+              style: GoogleFonts.montserrat(),
+            ),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -52,11 +94,7 @@ class _ReportOverviewScreenState extends State<ReportOverviewScreen> {
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [
-            Color(0xFFF6FAFC),
-            Color(0xFFDCF2FF),
-            Color(0xFFB4E4FF),
-          ],
+          colors: [Color(0xFFF6FAFC), Color(0xFFDCF2FF), Color(0xFFB4E4FF)],
         ),
       ),
       child: SafeArea(
@@ -69,39 +107,44 @@ class _ReportOverviewScreenState extends State<ReportOverviewScreen> {
             ),
 
             Expanded(
-              child: ListView(
-                padding: const EdgeInsets.only(
-                  left: 36,
-                  right: 36,
-                  bottom: 32,
-                ),
-                children: [
-                  Text(
-                    'Report Details',
-                    style: GoogleFonts.montserrat(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: const Color(0xFF003CC1),
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : RefreshIndicator(
+                      onRefresh: _loadDebts,
+                      child: ListView(
+                        padding: const EdgeInsets.only(
+                          left: 36,
+                          right: 36,
+                          bottom: 32,
+                        ),
+                        children: [
+                          Text(
+                            'Report Details',
+                            style: GoogleFonts.montserrat(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              color: const Color(0xFF003CC1),
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+
+                          _buildReportCard(
+                            title: 'You Owe',
+                            subtitle:
+                                'A list of all the money you need to pay to other group members.',
+                            data: youOwe,
+                          ),
+                          const SizedBox(height: 28),
+
+                          _buildReportCard(
+                            title: 'Owes You',
+                            subtitle:
+                                'A list of all the money that other group members need to pay you.',
+                            data: owesYou,
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 24),
-
-                  _buildReportCard(
-                    title: 'You Owe',
-                    subtitle:
-                        'A list of all the money you need to pay to other group members.',
-                    data: youOwe,
-                  ),
-                  const SizedBox(height: 28),
-
-                  _buildReportCard(
-                    title: 'Owes You',
-                    subtitle:
-                        'A list of all the money that other group members need to pay you.',
-                    data: owesYou,
-                  ),
-                ],
-              ),
             ),
           ],
         ),
@@ -115,11 +158,7 @@ class _ReportOverviewScreenState extends State<ReportOverviewScreen> {
       children: [
         ShaderMask(
           shaderCallback: (bounds) => const LinearGradient(
-            colors: [
-              Color(0xFF003CC1),
-              Color(0xFF038AFF),
-              Color(0xFF01A7FF),
-            ],
+            colors: [Color(0xFF003CC1), Color(0xFF038AFF), Color(0xFF01A7FF)],
           ).createShader(bounds),
           child: Text(
             'SplitSmart',
@@ -132,51 +171,65 @@ class _ReportOverviewScreenState extends State<ReportOverviewScreen> {
         ),
         Row(
           children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: const Color.fromARGB(255, 230, 245, 255).withOpacity(0.7),
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: Colors.white,
-                  width: 1.5,
-                ),
-              ),
-              child: const Icon(
-                Icons.notifications_outlined,
-                color: Color(0xFF038AFF),
-                size: 22,
-              ),
-            ),
+            const NotificationBell(),
             const SizedBox(width: 12),
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                gradient: const RadialGradient(
-                  colors: [
-                    Color(0xFF0254D8),
-                    Color(0xFF003CC1),
-                  ],
-                  center: Alignment.center,
-                  radius: 0.8,
-                ),
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.white, width: 2),
+            GestureDetector(
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ProfileScreen()),
               ),
-              child: Center(
-                child: Text(
-                  profile?['full_name'] != null
-                      ? (profile!['full_name'] as String)
-                          .substring(0, 1)
-                          .toUpperCase()
-                      : 'M',
-                  style: GoogleFonts.montserrat(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
+              child: Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  gradient: const RadialGradient(
+                    colors: [Color(0xFF0254D8), Color(0xFF003CC1)],
+                    center: Alignment.center,
+                    radius: 0.8,
                   ),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 2),
+                ),
+                child: ClipOval(
+                  child: (profile?['avatar_url'] as String?) != null
+                      ? Image.network(
+                          profile!['avatar_url'] as String,
+                          fit: BoxFit.cover,
+                          width: 40,
+                          height: 40,
+                          errorBuilder: (_, __, ___) => Center(
+                            child: Text(
+                              profile['name'] != null
+                                  ? ((profile['name'] as String).isNotEmpty
+                                        ? (profile['name'] as String)
+                                              .substring(0, 1)
+                                              .toUpperCase()
+                                        : '?')
+                                  : 'M',
+                              style: GoogleFonts.montserrat(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        )
+                      : Center(
+                          child: Text(
+                            profile?['name'] != null
+                                ? ((profile!['name'] as String).isNotEmpty
+                                      ? (profile['name'] as String)
+                                            .substring(0, 1)
+                                            .toUpperCase()
+                                      : '?')
+                                : 'M',
+                            style: GoogleFonts.montserrat(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
                 ),
               ),
             ),
@@ -197,9 +250,7 @@ class _ReportOverviewScreenState extends State<ReportOverviewScreen> {
       elevation: 2,
       margin: EdgeInsets.zero,
       color: Colors.white,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(26),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)),
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
@@ -223,10 +274,25 @@ class _ReportOverviewScreenState extends State<ReportOverviewScreen> {
               ),
             ),
             const SizedBox(height: 18),
-            ...data.map((item) => Padding(
+            if (data.isEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(
+                  'Nothing to show here',
+                  style: GoogleFonts.montserrat(
+                    fontSize: 12,
+                    color: const Color(0xFF9E9E9E),
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              )
+            else
+              ...data.map(
+                (item) => Padding(
                   padding: const EdgeInsets.only(bottom: 16),
                   child: _buildExpenseRow(item),
-                )),
+                ),
+              ),
           ],
         ),
       ),
@@ -260,7 +326,7 @@ class _ReportOverviewScreenState extends State<ReportOverviewScreen> {
         Row(
           children: [
             Text(
-              item['amount'].toStringAsFixed(2),
+              (item['amount'] as num).toStringAsFixed(2),
               style: GoogleFonts.montserrat(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,

@@ -101,7 +101,6 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
                   ),
                   const SizedBox(height: 12),
 
-                  // Member email fields with remove button
                   ...List.generate(_memberControllers.length, (index) {
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 10),
@@ -129,7 +128,6 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
                   }),
                   const SizedBox(height: 4),
 
-                  // Add another member button
                   Container(
                     width: double.infinity,
                     height: 50,
@@ -158,7 +156,6 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
                   ),
                   const SizedBox(height: 28),
 
-                  // Add Member button
                   Container(
                     width: double.infinity,
                     height: 52,

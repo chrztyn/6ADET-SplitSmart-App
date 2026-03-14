@@ -17,22 +17,17 @@ class _LandingScreenState extends State<LandingScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        // Background gradient
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [
-              Color(0xFFF6FAFC),
-              Color(0xFFDCF2FF),
-              Color(0xFFB4E4FF),
-            ],
+            colors: [Color(0xFFF6FAFC), Color(0xFFDCF2FF), Color(0xFFB4E4FF)],
           ),
         ),
         child: SafeArea(
+          bottom: false,
           child: Column(
             children: [
-              // Main content - centered
               Expanded(
                 child: Center(
                   child: Padding(
@@ -41,7 +36,6 @@ class _LandingScreenState extends State<LandingScreen> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        // Logo placeholder
                         Container(
                           width: 100,
                           height: 100,
@@ -59,8 +53,7 @@ class _LandingScreenState extends State<LandingScreen> {
                           ),
                         ),
                         const SizedBox(height: 32),
-                        
-                        // Title with gradient
+
                         ShaderMask(
                           shaderCallback: (bounds) => const LinearGradient(
                             colors: [
@@ -81,8 +74,7 @@ class _LandingScreenState extends State<LandingScreen> {
                           ),
                         ),
                         const SizedBox(height: 0.3),
-                        
-                        // Tagline
+
                         Text(
                           'Split Bills, The Smart Way',
                           style: GoogleFonts.montserrat(
@@ -94,8 +86,7 @@ class _LandingScreenState extends State<LandingScreen> {
                           textAlign: TextAlign.center,
                         ),
                         const SizedBox(height: 20),
-                        
-                        // Subtitle
+
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 8),
                           child: Text(
@@ -114,117 +105,162 @@ class _LandingScreenState extends State<LandingScreen> {
                   ),
                 ),
               ),
-              
-              // Bottom buttons - fixed to bottom
-              SizedBox(
-                height: 70,
-                child: Row(
-                  children: [
-                    // Sign Up button (left side, text-style)
-                    Expanded(
-                      flex: 1,
-                      child: InkWell(
-                        onTap: () {
-                          Navigator.of(context).push(
-                            PageRouteBuilder(
-                              pageBuilder: (context, animation, secondaryAnimation) =>
-                                  const RegisterScreen(),
-                              transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                                return SlideTransition(
-                                  position: Tween<Offset>(
-                                    begin: const Offset(0, 1),
-                                    end: Offset.zero,
-                                  ).animate(CurvedAnimation(
-                                    parent: animation,
-                                    curve: Curves.easeOutCubic,
-                                  )),
-                                  child: child,
-                                );
-                              },
-                              transitionDuration: const Duration(milliseconds: 600),
-                            ),
-                          );
-                        },
-                        child: Container(
-                          alignment: Alignment.center,
-                          child: Text(
-                            'Sign Up',
-                            style: GoogleFonts.montserrat(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: const Color(0xFF454545),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    
-                    // Sign In button (right side, gradient container)
-                    Expanded(
-                      flex: 1,
-                      child: GestureDetector(
-                        onTapDown: (_) => setState(() => _isSignInPressed = true),
-                        onTapUp: (_) {
-                          setState(() => _isSignInPressed = false);
-                          Navigator.of(context).push(
-                            PageRouteBuilder(
-                              pageBuilder: (context, animation, secondaryAnimation) =>
-                                  const LoginScreen(),
-                              transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                                return SlideTransition(
-                                  position: Tween<Offset>(
-                                    begin: const Offset(0, 1),
-                                    end: Offset.zero,
-                                  ).animate(CurvedAnimation(
-                                    parent: animation,
-                                    curve: Curves.easeOutCubic,
-                                  )),
-                                  child: child,
-                                );
-                              },
-                              transitionDuration: const Duration(milliseconds: 600),
-                            ),
-                          );
-                        },
-                        onTapCancel: () => setState(() => _isSignInPressed = false),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 150),
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: _isSignInPressed 
-                                  ? Alignment.bottomRight 
-                                  : Alignment.topLeft,
-                              end: _isSignInPressed 
-                                  ? Alignment.topLeft 
-                                  : Alignment.bottomRight,
-                              colors: _isSignInPressed
-                                  ? [
-                                      const Color(0xFF0041C6),
-                                      const Color(0xFF075EFB),
-                                    ]
-                                  : [
-                                      const Color(0xFF075EFB),
-                                      const Color(0xFF0041C6),
-                                    ],
-                            ),
-                            borderRadius: const BorderRadius.only(
-                              topLeft: Radius.circular(30),
-                            ),
-                          ),
-                          child: Text(
-                            'Sign In',
-                            style: GoogleFonts.montserrat(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white,
+
+              // Bottom buttons - pinned to screen bottom edge
+              Builder(
+                builder: (context) {
+                  final bottomPadding = MediaQuery.of(context).padding.bottom;
+                  return SizedBox(
+                    height: 70 + bottomPadding,
+                    child: Row(
+                      children: [
+                        Expanded(
+                          flex: 1,
+                          child: InkWell(
+                            onTap: () {
+                              Navigator.of(context).push(
+                                PageRouteBuilder(
+                                  pageBuilder:
+                                      (
+                                        context,
+                                        animation,
+                                        secondaryAnimation,
+                                      ) => const RegisterScreen(),
+                                  transitionsBuilder:
+                                      (
+                                        context,
+                                        animation,
+                                        secondaryAnimation,
+                                        child,
+                                      ) {
+                                        return SlideTransition(
+                                          position:
+                                              Tween<Offset>(
+                                                begin: const Offset(0, 1),
+                                                end: Offset.zero,
+                                              ).animate(
+                                                CurvedAnimation(
+                                                  parent: animation,
+                                                  curve: Curves.easeOutCubic,
+                                                ),
+                                              ),
+                                          child: child,
+                                        );
+                                      },
+                                  transitionDuration: const Duration(
+                                    milliseconds: 600,
+                                  ),
+                                ),
+                              );
+                            },
+                            child: Padding(
+                              padding: EdgeInsets.only(
+                                top: 16,
+                                bottom: bottomPadding,
+                              ),
+                              child: Container(
+                                alignment: Alignment.center,
+                                child: Text(
+                                  'Sign Up',
+                                  style: GoogleFonts.montserrat(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: const Color(0xFF454545),
+                                  ),
+                                ),
+                              ),
                             ),
                           ),
                         ),
-                      ),
+
+                        Expanded(
+                          flex: 1,
+                          child: GestureDetector(
+                            onTapDown: (_) =>
+                                setState(() => _isSignInPressed = true),
+                            onTapUp: (_) {
+                              setState(() => _isSignInPressed = false);
+                              Navigator.of(context).push(
+                                PageRouteBuilder(
+                                  pageBuilder:
+                                      (
+                                        context,
+                                        animation,
+                                        secondaryAnimation,
+                                      ) => const LoginScreen(),
+                                  transitionsBuilder:
+                                      (
+                                        context,
+                                        animation,
+                                        secondaryAnimation,
+                                        child,
+                                      ) {
+                                        return SlideTransition(
+                                          position:
+                                              Tween<Offset>(
+                                                begin: const Offset(0, 1),
+                                                end: Offset.zero,
+                                              ).animate(
+                                                CurvedAnimation(
+                                                  parent: animation,
+                                                  curve: Curves.easeOutCubic,
+                                                ),
+                                              ),
+                                          child: child,
+                                        );
+                                      },
+                                  transitionDuration: const Duration(
+                                    milliseconds: 600,
+                                  ),
+                                ),
+                              );
+                            },
+                            onTapCancel: () =>
+                                setState(() => _isSignInPressed = false),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 150),
+                              padding: EdgeInsets.only(
+                                top: 16,
+                                bottom: bottomPadding,
+                              ),
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: _isSignInPressed
+                                      ? Alignment.bottomRight
+                                      : Alignment.topLeft,
+                                  end: _isSignInPressed
+                                      ? Alignment.topLeft
+                                      : Alignment.bottomRight,
+                                  colors: _isSignInPressed
+                                      ? [
+                                          const Color(0xFF0041C6),
+                                          const Color(0xFF075EFB),
+                                        ]
+                                      : [
+                                          const Color(0xFF075EFB),
+                                          const Color(0xFF0041C6),
+                                        ],
+                                ),
+                                borderRadius: const BorderRadius.only(
+                                  topLeft: Radius.circular(30),
+                                ),
+                              ),
+                              child: Text(
+                                'Sign In',
+                                style: GoogleFonts.montserrat(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
+                  );
+                },
               ),
             ],
           ),

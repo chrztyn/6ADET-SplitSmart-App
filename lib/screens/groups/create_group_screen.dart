@@ -64,7 +64,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
             backgroundColor: Colors.green,
           ),
         );
-        Navigator.pop(context, true); // RETURNS true so caller knows to refresh
+        Navigator.pop(context, true);
       }
     } catch (e) {
       if (mounted) {
@@ -111,7 +111,6 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
                   ),
                   const SizedBox(height: 10),
 
-                  // Member email fields with remove button
                   ...List.generate(_memberControllers.length, (index) {
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 10),
@@ -139,7 +138,6 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
                   }),
                   const SizedBox(height: 4),
 
-                  // Add another member button
                   Container(
                     width: double.infinity,
                     height: 50,
@@ -168,7 +166,6 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
                   ),
                   const SizedBox(height: 28),
 
-                  // Create Group button
                   Container(
                     width: double.infinity,
                     height: 52,

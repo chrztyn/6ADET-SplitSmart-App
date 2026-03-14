@@ -15,7 +15,8 @@ class LoginScreen extends StatefulWidget {
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStateMixin {
+class _LoginScreenState extends State<LoginScreen>
+    with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -28,11 +29,17 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   @override
   void initState() {
     super.initState();
-    _animationController = AnimationController(vsync: this, duration: const Duration(milliseconds: 600));
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 1),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(parent: _animationController, curve: Curves.easeOutCubic));
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+    _slideAnimation = Tween<Offset>(begin: const Offset(0, 1), end: Offset.zero)
+        .animate(
+          CurvedAnimation(
+            parent: _animationController,
+            curve: Curves.easeOutCubic,
+          ),
+        );
     _animationController.forward();
   }
 
@@ -66,30 +73,38 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
         password: _passwordController.text,
       );
 
-      // ADDED - Handle remember me
       final prefs = await SharedPreferences.getInstance();
       if (_rememberMe) {
         await prefs.setString('remembered_email', _emailController.text.trim());
       } else {
         await prefs.remove('remembered_email');
       }
-      await context.read<AppProvider>().login(_emailController.text.trim(), _passwordController.text);
+      await context.read<AppProvider>().login(
+        _emailController.text.trim(),
+        _passwordController.text,
+      );
 
       if (mounted) {
         // Navigate to dashboard and remove all previous routes
-        Navigator.of(
-          context,
-        ).pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const DashboardScreen()), (route) => false);
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const DashboardScreen()),
+          (route) => false,
+        );
       }
     } on AuthException catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message), backgroundColor: Colors.red));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(error.message), backgroundColor: Colors.red),
+        );
       }
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Unexpected error: $error'), backgroundColor: Colors.red));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Unexpected error: $error'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -100,7 +115,6 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        // Same background gradient as landing page
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
@@ -109,9 +123,9 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
           ),
         ),
         child: SafeArea(
+          bottom: false,
           child: Stack(
             children: [
-              // Back button - outside card
               Positioned(
                 top: 16,
                 left: 16,
@@ -119,11 +133,18 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                   onTap: () => Navigator.of(context).pop(),
                   borderRadius: BorderRadius.circular(12),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 8,
+                    ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.arrow_back_ios, color: Color(0xFF075EFB), size: 20),
+                        const Icon(
+                          Icons.arrow_back_ios,
+                          color: Color(0xFF075EFB),
+                          size: 20,
+                        ),
                         const SizedBox(width: 4),
                         Text(
                           'Back',
@@ -139,7 +160,6 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                 ),
               ),
 
-              // White card that slides up
               SlideTransition(
                 position: _slideAnimation,
                 child: Align(
@@ -148,11 +168,25 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                     height: MediaQuery.of(context).size.height * 0.8,
                     decoration: const BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.only(topLeft: Radius.circular(40), topRight: Radius.circular(40)),
-                      boxShadow: [BoxShadow(color: Color(0x1A000000), blurRadius: 20, offset: Offset(0, -5))],
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(40),
+                        topRight: Radius.circular(40),
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Color(0x1A000000),
+                          blurRadius: 20,
+                          offset: Offset(0, -5),
+                        ),
+                      ],
                     ),
                     child: SingleChildScrollView(
-                      padding: const EdgeInsets.all(32),
+                      padding: EdgeInsets.fromLTRB(
+                        32,
+                        32,
+                        32,
+                        32 + MediaQuery.of(context).padding.bottom,
+                      ),
                       child: Form(
                         key: _formKey,
                         child: Column(
@@ -160,7 +194,6 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                           children: [
                             const SizedBox(height: 8),
 
-                            // Header Section
                             Text(
                               'Welcome Back',
                               style: GoogleFonts.montserrat(
@@ -173,12 +206,14 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                             const SizedBox(height: 5),
                             Text(
                               'Sign in to your account',
-                              style: GoogleFonts.montserrat(fontSize: 12, color: const Color(0xFF6B7280)),
+                              style: GoogleFonts.montserrat(
+                                fontSize: 12,
+                                color: const Color(0xFF6B7280),
+                              ),
                               textAlign: TextAlign.center,
                             ),
                             const SizedBox(height: 40),
 
-                            // Email Field
                             Text(
                               'Email',
                               style: GoogleFonts.montserrat(
@@ -193,26 +228,44 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                               style: GoogleFonts.montserrat(),
                               decoration: InputDecoration(
                                 hintText: 'Enter your Email',
-                                hintStyle: GoogleFonts.montserrat(color: const Color(0xFFBDC3C7), fontSize: 14),
+                                hintStyle: GoogleFonts.montserrat(
+                                  color: const Color(0xFFBDC3C7),
+                                  fontSize: 14,
+                                ),
                                 filled: true,
                                 fillColor: Colors.white,
                                 enabledBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
-                                  borderSide: const BorderSide(color: Color(0xFFB1B1B0), width: 0.5),
+                                  borderSide: const BorderSide(
+                                    color: Color(0xFFB1B1B0),
+                                    width: 0.5,
+                                  ),
                                 ),
                                 focusedBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
-                                  borderSide: const BorderSide(color: Color(0xFFA0A0A0), width: 0.5),
+                                  borderSide: const BorderSide(
+                                    color: Color(0xFFA0A0A0),
+                                    width: 0.5,
+                                  ),
                                 ),
                                 errorBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
-                                  borderSide: const BorderSide(color: Colors.red, width: 0.5),
+                                  borderSide: const BorderSide(
+                                    color: Colors.red,
+                                    width: 0.5,
+                                  ),
                                 ),
                                 focusedErrorBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
-                                  borderSide: const BorderSide(color: Colors.red, width: 0.5),
+                                  borderSide: const BorderSide(
+                                    color: Colors.red,
+                                    width: 0.5,
+                                  ),
                                 ),
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 20,
+                                  vertical: 16,
+                                ),
                               ),
                               keyboardType: TextInputType.emailAddress,
                               validator: (value) {
@@ -227,7 +280,6 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                             ),
                             const SizedBox(height: 20),
 
-                            // Password Field
                             Text(
                               'Password',
                               style: GoogleFonts.montserrat(
@@ -242,33 +294,55 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                               style: GoogleFonts.montserrat(),
                               decoration: InputDecoration(
                                 hintText: 'Create a password',
-                                hintStyle: GoogleFonts.montserrat(color: const Color(0xFFBDC3C7), fontSize: 14),
+                                hintStyle: GoogleFonts.montserrat(
+                                  color: const Color(0xFFBDC3C7),
+                                  fontSize: 14,
+                                ),
                                 filled: true,
                                 fillColor: Colors.white,
                                 enabledBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
-                                  borderSide: const BorderSide(color: Color(0xFFB1B1B0), width: 0.5),
+                                  borderSide: const BorderSide(
+                                    color: Color(0xFFB1B1B0),
+                                    width: 0.5,
+                                  ),
                                 ),
                                 focusedBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
-                                  borderSide: const BorderSide(color: Color(0xFFA0A0A0), width: 0.5),
+                                  borderSide: const BorderSide(
+                                    color: Color(0xFFA0A0A0),
+                                    width: 0.5,
+                                  ),
                                 ),
                                 errorBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
-                                  borderSide: const BorderSide(color: Colors.red, width: 0.5),
+                                  borderSide: const BorderSide(
+                                    color: Colors.red,
+                                    width: 0.5,
+                                  ),
                                 ),
                                 focusedErrorBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
-                                  borderSide: const BorderSide(color: Colors.red, width: 0.5),
+                                  borderSide: const BorderSide(
+                                    color: Colors.red,
+                                    width: 0.5,
+                                  ),
                                 ),
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 20,
+                                  vertical: 16,
+                                ),
                                 suffixIcon: IconButton(
                                   icon: Icon(
-                                    _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                                    _obscurePassword
+                                        ? Icons.visibility_off
+                                        : Icons.visibility,
                                     color: const Color(0xFF9CA3AF),
                                     size: 18,
                                   ),
-                                  onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                                  onPressed: () => setState(
+                                    () => _obscurePassword = !_obscurePassword,
+                                  ),
                                 ),
                               ),
                               obscureText: _obscurePassword,
@@ -284,7 +358,6 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                             ),
                             const SizedBox(height: 16),
 
-                            // Remember Me & Forgot Password Row
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
@@ -298,12 +371,23 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                         child: Checkbox(
                                           value: _rememberMe,
                                           onChanged: (value) {
-                                            setState(() => _rememberMe = value ?? false);
+                                            setState(
+                                              () =>
+                                                  _rememberMe = value ?? false,
+                                            );
                                           },
                                           activeColor: const Color(0xFF075EFB),
-                                          side: const BorderSide(color: Color(0xFFB1B1B0), width: 0.5),
-                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(3)),
-                                          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                          side: const BorderSide(
+                                            color: Color(0xFFB1B1B0),
+                                            width: 0.5,
+                                          ),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              3,
+                                            ),
+                                          ),
+                                          materialTapTargetSize:
+                                              MaterialTapTargetSize.shrinkWrap,
                                           visualDensity: VisualDensity.compact,
                                         ),
                                       ),
@@ -311,15 +395,20 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                     const SizedBox(width: 6),
                                     Text(
                                       'Remember me',
-                                      style: GoogleFonts.montserrat(fontSize: 12, color: const Color(0xFF6B7280)),
+                                      style: GoogleFonts.montserrat(
+                                        fontSize: 12,
+                                        color: const Color(0xFF6B7280),
+                                      ),
                                     ),
                                   ],
                                 ),
                                 InkWell(
-                                  // ADDED - Navigate to ForgotPasswordScreen
                                   onTap: () => Navigator.push(
                                     context,
-                                    MaterialPageRoute(builder: (_) => const ForgotPasswordScreen()),
+                                    MaterialPageRoute(
+                                      builder: (_) =>
+                                          const ForgotPasswordScreen(),
+                                    ),
                                   ),
                                   child: Text(
                                     'Forgot password?',
@@ -334,17 +423,23 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                             ),
                             const SizedBox(height: 32),
 
-                            // Sign In Button
                             GestureDetector(
                               onTap: _isLoading ? null : _signIn,
                               child: Container(
                                 height: 48,
                                 decoration: BoxDecoration(
-                                  gradient: const LinearGradient(colors: [Color(0xFF075EFB), Color(0xFF0041C6)]),
+                                  gradient: const LinearGradient(
+                                    colors: [
+                                      Color(0xFF075EFB),
+                                      Color(0xFF0041C6),
+                                    ],
+                                  ),
                                   borderRadius: BorderRadius.circular(12),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: const Color(0xFF075EFB).withOpacity(0.3),
+                                      color: const Color(
+                                        0xFF075EFB,
+                                      ).withOpacity(0.3),
                                       blurRadius: 15,
                                       offset: const Offset(0, 8),
                                     ),
@@ -357,7 +452,10 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                           width: 18,
                                           child: CircularProgressIndicator(
                                             strokeWidth: 2,
-                                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                            valueColor:
+                                                AlwaysStoppedAnimation<Color>(
+                                                  Colors.white,
+                                                ),
                                           ),
                                         )
                                       : Text(
@@ -373,43 +471,87 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                             ),
                             const SizedBox(height: 32),
 
-                            // Divider with text
                             Row(
                               children: [
-                                const Expanded(child: Divider(color: Color(0xFFE5E7EB))),
+                                const Expanded(
+                                  child: Divider(color: Color(0xFFE5E7EB)),
+                                ),
                                 Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                  ),
                                   child: Text(
                                     'Sign in with',
-                                    style: GoogleFonts.montserrat(fontSize: 10, color: const Color(0xFF9CA3AF)),
+                                    style: GoogleFonts.montserrat(
+                                      fontSize: 10,
+                                      color: const Color(0xFF9CA3AF),
+                                    ),
                                   ),
                                 ),
-                                const Expanded(child: Divider(color: Color(0xFFE5E7EB))),
+                                const Expanded(
+                                  child: Divider(color: Color(0xFFE5E7EB)),
+                                ),
                               ],
                             ),
                             const SizedBox(height: 24),
 
-                            // Continue with Google Button
                             Container(
                               height: 54,
                               decoration: BoxDecoration(
                                 color: const Color.fromARGB(255, 255, 255, 255),
-                                border: Border.all(color: const Color(0xFFB1B1B0), width: 0.5),
+                                border: Border.all(
+                                  color: const Color(0xFFB1B1B0),
+                                  width: 0.5,
+                                ),
                                 borderRadius: BorderRadius.circular(30),
                               ),
                               child: Material(
                                 color: Colors.transparent,
                                 child: InkWell(
-                                  // ADDED - Implement Google Sign-In via provider
-                                  onTap: () => context.read<AppProvider>().signInWithGoogle(),
+                                  onTap: () async {
+                                    try {
+                                      await context
+                                          .read<AppProvider>()
+                                          .signInWithGoogle();
+                                      await context.read<AppProvider>().init();
+                                      if (mounted) {
+                                        Navigator.of(
+                                          context,
+                                        ).pushAndRemoveUntil(
+                                          MaterialPageRoute(
+                                            builder: (_) =>
+                                                const DashboardScreen(),
+                                          ),
+                                          (route) => false,
+                                        );
+                                      }
+                                    } catch (e) {
+                                      if (mounted) {
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          SnackBar(
+                                            content: Text(e.toString()),
+                                            backgroundColor: Colors.red,
+                                          ),
+                                        );
+                                      }
+                                    }
+                                  },
                                   borderRadius: BorderRadius.circular(30),
                                   child: Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                    ),
                                     child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
                                       children: [
-                                        // Google logo
-                                        Image.asset('assets/images/Google.png', width: 20, height: 20),
+                                        Image.asset(
+                                          'assets/images/Google.png',
+                                          width: 20,
+                                          height: 20,
+                                        ),
                                         const SizedBox(width: 12),
                                         Text(
                                           'Continue with Google',
@@ -427,29 +569,51 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                             ),
                             const SizedBox(height: 32),
 
-                            // Footer - Sign Up Link
                             Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Text(
                                   'Already have an account? ',
-                                  style: GoogleFonts.montserrat(fontSize: 10, color: const Color(0xFF6B7280)),
+                                  style: GoogleFonts.montserrat(
+                                    fontSize: 10,
+                                    color: const Color(0xFF6B7280),
+                                  ),
                                 ),
                                 InkWell(
                                   onTap: () {
                                     Navigator.of(context).pushReplacement(
                                       PageRouteBuilder(
-                                        pageBuilder: (context, animation, secondaryAnimation) => const RegisterScreen(),
-                                        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                                          return SlideTransition(
-                                            position: Tween<Offset>(
-                                              begin: const Offset(0, 1),
-                                              end: Offset.zero,
-                                            ).animate(CurvedAnimation(parent: animation, curve: Curves.easeOutCubic)),
-                                            child: child,
-                                          );
-                                        },
-                                        transitionDuration: const Duration(milliseconds: 600),
+                                        pageBuilder:
+                                            (
+                                              context,
+                                              animation,
+                                              secondaryAnimation,
+                                            ) => const RegisterScreen(),
+                                        transitionsBuilder:
+                                            (
+                                              context,
+                                              animation,
+                                              secondaryAnimation,
+                                              child,
+                                            ) {
+                                              return SlideTransition(
+                                                position:
+                                                    Tween<Offset>(
+                                                      begin: const Offset(0, 1),
+                                                      end: Offset.zero,
+                                                    ).animate(
+                                                      CurvedAnimation(
+                                                        parent: animation,
+                                                        curve:
+                                                            Curves.easeOutCubic,
+                                                      ),
+                                                    ),
+                                                child: child,
+                                              );
+                                            },
+                                        transitionDuration: const Duration(
+                                          milliseconds: 600,
+                                        ),
                                       ),
                                     );
                                   },

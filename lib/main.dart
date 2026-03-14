@@ -6,15 +6,26 @@ import 'providers/app_provider.dart';
 import 'screens/auth/landing_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/auth/reset_password_screen.dart';
+import 'utils/local_notifications_helper.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await dotenv.load(fileName: '.env');
 
-  await Supabase.initialize(url: dotenv.env['SUPABASE_URL']!, anonKey: dotenv.env['SUPABASE_ANON_KEY']!);
+  await Supabase.initialize(
+    url: dotenv.env['SUPABASE_URL']!,
+    anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
+  );
 
-  runApp(ChangeNotifierProvider(create: (_) => AppProvider(), child: const SplitSmartApp()));
+  await LocalNotificationsHelper.init();
+
+  runApp(
+    ChangeNotifierProvider(
+      create: (_) => AppProvider(),
+      child: const SplitSmartApp(),
+    ),
+  );
 }
 
 class SplitSmartApp extends StatelessWidget {
@@ -34,11 +45,21 @@ class SplitSmartApp extends StatelessWidget {
     return ThemeData(
       colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF2563EB)),
       scaffoldBackgroundColor: const Color(0xFFF9FAFB),
-      appBarTheme: const AppBarTheme(backgroundColor: Color(0xFF2563EB), foregroundColor: Colors.white, elevation: 0),
-      cardTheme: CardThemeData(elevation: 2, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+      appBarTheme: const AppBarTheme(
+        backgroundColor: Color(0xFF2563EB),
+        foregroundColor: Colors.white,
+        elevation: 0,
+      ),
+      cardTheme: CardThemeData(
+        elevation: 2,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
       inputDecorationTheme: InputDecorationTheme(
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 12,
+        ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
@@ -63,17 +84,28 @@ class _AuthGateState extends State<_AuthGate> {
   @override
   void initState() {
     super.initState();
+
+    final existingSession = Supabase.instance.client.auth.currentSession;
+    if (existingSession != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) context.read<AppProvider>().init();
+      });
+    }
+
     Supabase.instance.client.auth.onAuthStateChange.listen((data) {
       if (!mounted) return;
       final provider = context.read<AppProvider>();
 
       if (data.event == AuthChangeEvent.passwordRecovery) {
-        Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ResetPasswordScreen()));
+        Navigator.of(
+          context,
+        ).push(MaterialPageRoute(builder: (_) => const ResetPasswordScreen()));
         return;
       }
 
-      if (data.event == AuthChangeEvent.signedIn) {
-        provider.init();
+      if (data.event == AuthChangeEvent.signedIn ||
+          data.event == AuthChangeEvent.initialSession) {
+        if (data.session != null) provider.init();
       }
       setState(() {});
     });
@@ -88,7 +120,9 @@ class _AuthGateState extends State<_AuthGate> {
     return Consumer<AppProvider>(
       builder: (context, provider, _) {
         if (provider.isLoading && provider.profile == null) {
-          return const Scaffold(body: Center(child: CircularProgressIndicator()));
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
         }
         return const DashboardScreen();
       },
