@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import '../models/app_notification.dart';
 import '../providers/app_provider.dart';
 import '../screens/notifications_screen.dart';
 
@@ -13,7 +14,7 @@ class NotificationBell extends StatefulWidget {
 
 class _NotificationBellState extends State<NotificationBell> {
   final OverlayPortalController _controller = OverlayPortalController();
-  final LayerLink _link = LayerLink();
+  final _bellKey = GlobalKey();
 
   @override
   void dispose() {
@@ -26,14 +27,26 @@ class _NotificationBellState extends State<NotificationBell> {
     final provider = context.watch<AppProvider>();
     final unreadCount = provider.unreadCount;
 
-    return CompositedTransformTarget(
-      link: _link,
-      child: OverlayPortal(
-        controller: _controller,
-        overlayChildBuilder: (_) => _NotifOverlay(
-          link: _link,
+    return OverlayPortal(
+      controller: _controller,
+      overlayChildBuilder: (_) {
+        final box = _bellKey.currentContext?.findRenderObject() as RenderBox?;
+        final mq = MediaQuery.of(context);
+        final screenWidth = mq.size.width;
+        double top = mq.padding.top + 64;
+        double right = 16;
+        if (box != null) {
+          final pos = box.localToGlobal(Offset.zero);
+          top = pos.dy + box.size.height + 8;
+          right = screenWidth - pos.dx - box.size.width;
+          // keep popup (320px wide) fully within screen with 8px margins
+          right = right.clamp(8.0, screenWidth - 328.0);
+        }
+        return _NotifOverlay(
           notifications: provider.notifications,
           unreadCount: unreadCount,
+          top: top,
+          right: right,
           onClose: _controller.hide,
           onMarkAllRead: () async {
             await provider.markAllNotificationsRead();
@@ -45,61 +58,62 @@ class _NotificationBellState extends State<NotificationBell> {
               MaterialPageRoute(builder: (_) => const NotificationsScreen()),
             );
           },
-        ),
-        child: GestureDetector(
-          onTap: () =>
-              _controller.isShowing ? _controller.hide() : _controller.show(),
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: const Color.fromARGB(
-                    255,
-                    230,
-                    245,
-                    255,
-                  ).withOpacity(0.7),
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 1.5),
-                ),
-                child: Icon(
-                  unreadCount > 0
-                      ? Icons.notifications
-                      : Icons.notifications_outlined,
-                  color: const Color(0xFF038AFF),
-                  size: 22,
-                ),
+        );
+      },
+      child: GestureDetector(
+        onTap: () =>
+            _controller.isShowing ? _controller.hide() : _controller.show(),
+        child: Stack(
+          key: _bellKey,
+          clipBehavior: Clip.none,
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: const Color.fromARGB(
+                  255,
+                  230,
+                  245,
+                  255,
+                ).withOpacity(0.7),
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white, width: 1.5),
               ),
-              if (unreadCount > 0)
-                Positioned(
-                  right: -2,
-                  top: -2,
-                  child: Container(
-                    padding: const EdgeInsets.all(2),
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFFF3B3B),
-                      shape: BoxShape.circle,
+              child: Icon(
+                unreadCount > 0
+                    ? Icons.notifications
+                    : Icons.notifications_outlined,
+                color: const Color(0xFF038AFF),
+                size: 22,
+              ),
+            ),
+            if (unreadCount > 0)
+              Positioned(
+                right: -2,
+                top: -2,
+                child: Container(
+                  padding: const EdgeInsets.all(2),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFFF3B3B),
+                    shape: BoxShape.circle,
+                  ),
+                  constraints: const BoxConstraints(
+                    minWidth: 16,
+                    minHeight: 16,
+                  ),
+                  child: Text(
+                    unreadCount > 9 ? '9+' : '$unreadCount',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 9,
+                      fontWeight: FontWeight.bold,
                     ),
-                    constraints: const BoxConstraints(
-                      minWidth: 16,
-                      minHeight: 16,
-                    ),
-                    child: Text(
-                      unreadCount > 9 ? '9+' : '$unreadCount',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 9,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
+                    textAlign: TextAlign.center,
                   ),
                 ),
-            ],
-          ),
+              ),
+          ],
         ),
       ),
     );
@@ -109,17 +123,19 @@ class _NotificationBellState extends State<NotificationBell> {
 // ── Overlay dropdown ──────────────────────────────────────────────────────────
 
 class _NotifOverlay extends StatelessWidget {
-  final LayerLink link;
-  final List<Map<String, dynamic>> notifications;
+  final List<AppNotification> notifications;
   final int unreadCount;
+  final double top;
+  final double right;
   final VoidCallback onClose;
   final VoidCallback onMarkAllRead;
   final VoidCallback onViewAll;
 
   const _NotifOverlay({
-    required this.link,
     required this.notifications,
     required this.unreadCount,
+    required this.top,
+    required this.right,
     required this.onClose,
     required this.onMarkAllRead,
     required this.onViewAll,
@@ -138,12 +154,9 @@ class _NotifOverlay extends StatelessWidget {
           ),
         ),
 
-        CompositedTransformFollower(
-          link: link,
-          showWhenUnlinked: false,
-          targetAnchor: Alignment.bottomRight,
-          followerAnchor: Alignment.topRight,
-          offset: const Offset(0, 8),
+        Positioned(
+          top: top,
+          right: right,
           child: Material(
             elevation: 12,
             borderRadius: BorderRadius.circular(20),
@@ -293,16 +306,16 @@ class _NotifOverlay extends StatelessWidget {
 // ── Individual tile ────────────────────────────────────────────────────────────
 
 class _NotifTile extends StatelessWidget {
-  final Map<String, dynamic> notification;
+  final AppNotification notification;
 
   const _NotifTile({required this.notification});
 
   @override
   Widget build(BuildContext context) {
-    final type = notification['type'] as String? ?? '';
-    final message = notification['message'] as String? ?? '';
-    final isRead = notification['is_read'] as bool? ?? true;
-    final createdAt = notification['created_at'] as String? ?? '';
+    final type = notification.type;
+    final message = notification.message;
+    final isRead = notification.isRead;
+    final createdAt = notification.createdAt.toIso8601String();
 
     IconData icon;
     Color iconBg;

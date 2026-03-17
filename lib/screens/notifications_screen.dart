@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import '../models/app_notification.dart';
 import '../providers/app_provider.dart';
+import '../widgets/skeleton.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -83,7 +85,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                       ),
                     ),
                     const Spacer(),
-                    if (notifications.any((n) => n['is_read'] == false))
+                    if (notifications.any((n) => !n.isRead))
                       TextButton(
                         onPressed: () => provider.markAllNotificationsRead(),
                         child: Text(
@@ -101,7 +103,16 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
               Expanded(
                 child: provider.isLoading
-                    ? const Center(child: CircularProgressIndicator())
+                    ? ListView.builder(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 8,
+                        ),
+                        itemCount: 6,
+                        itemBuilder: (_, __) => const SkeletonListItem(
+                          padding: EdgeInsets.symmetric(vertical: 10),
+                        ),
+                      )
                     : RefreshIndicator(
                         onRefresh: () async => provider.init(),
                         child: notifications.isEmpty
@@ -176,16 +187,16 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 }
 
 class _NotifCard extends StatelessWidget {
-  final Map<String, dynamic> notification;
+  final AppNotification notification;
 
   const _NotifCard({required this.notification});
 
   @override
   Widget build(BuildContext context) {
-    final type = notification['type'] as String? ?? '';
-    final message = notification['message'] as String? ?? '';
-    final isRead = notification['is_read'] as bool? ?? true;
-    final createdAt = notification['created_at'] as String? ?? '';
+    final type = notification.type;
+    final message = notification.message;
+    final isRead = notification.isRead;
+    final createdAt = notification.createdAt.toIso8601String();
 
     IconData icon;
     Color iconBg;

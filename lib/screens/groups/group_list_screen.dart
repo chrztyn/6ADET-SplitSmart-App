@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../providers/app_provider.dart';
 import '../../widgets/notification_bell.dart';
+import '../../widgets/skeleton.dart';
 import 'group_expense_screen.dart';
 import 'create_group_screen.dart';
 
@@ -105,7 +106,17 @@ class _GroupListScreenState extends State<GroupListScreen> {
     return Container(
       color: Colors.white,
       child: provider.isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 32),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SkeletonBox(width: 120, height: 22, borderRadius: 8),
+                  const SizedBox(height: 20),
+                  ...List.generate(4, (_) => const SkeletonCard()),
+                ],
+              ),
+            )
           : RefreshIndicator(
               onRefresh: () => provider.refreshGroups(),
               child: SingleChildScrollView(

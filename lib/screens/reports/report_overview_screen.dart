@@ -3,7 +3,9 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../providers/app_provider.dart';
+import '../../utils/helpers.dart';
 import '../../widgets/notification_bell.dart';
+import '../../widgets/skeleton.dart';
 import '../profile_screen.dart';
 
 class ReportOverviewScreen extends StatefulWidget {
@@ -71,10 +73,7 @@ class _ReportOverviewScreenState extends State<ReportOverviewScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              'Failed to load report: $e',
-              style: GoogleFonts.montserrat(),
-            ),
+            content: Text(friendlyError(e), style: GoogleFonts.montserrat()),
             backgroundColor: Colors.red,
           ),
         );
@@ -108,7 +107,27 @@ class _ReportOverviewScreenState extends State<ReportOverviewScreen> {
 
             Expanded(
               child: _isLoading
-                  ? const Center(child: CircularProgressIndicator())
+                  ? ListView(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 36,
+                        vertical: 8,
+                      ),
+                      children: [
+                        const SkeletonBox(
+                          width: 160,
+                          height: 22,
+                          borderRadius: 8,
+                        ),
+                        const SizedBox(height: 24),
+                        ...List.generate(
+                          5,
+                          (_) => const Padding(
+                            padding: EdgeInsets.only(bottom: 14),
+                            child: SkeletonCard(),
+                          ),
+                        ),
+                      ],
+                    )
                   : RefreshIndicator(
                       onRefresh: _loadDebts,
                       child: ListView(

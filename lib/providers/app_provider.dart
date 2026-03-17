@@ -5,6 +5,7 @@ import '../services/auth_service.dart';
 import '../services/groups_service.dart';
 import '../services/expenses_service.dart';
 import '../services/debts_service.dart';
+import '../models/app_notification.dart';
 import '../services/notifications_service.dart';
 import '../services/supabase_client.dart';
 import '../utils/local_notifications_helper.dart';
@@ -22,7 +23,7 @@ class AppProvider extends ChangeNotifier {
   List<Map<String, dynamic>> _myGroups = [];
   List<Map<String, dynamic>> _currentExpenses = [];
   List<Map<String, dynamic>> _myDebts = [];
-  List<Map<String, dynamic>> _notifications = [];
+  List<AppNotification> _notifications = [];
   List<Map<String, dynamic>> _recentActivity = [];
   bool _isLoading = false;
   String? _error;
@@ -33,14 +34,14 @@ class AppProvider extends ChangeNotifier {
   bool _initialized = false;
 
   // Track latest notification timestamp to detect new arrivals
-  String? _latestNotifTimestamp;
+  DateTime? _latestNotifTimestamp;
 
   // =========== GETTERS ===========
   Map<String, dynamic>? get profile => _profile;
   List<Map<String, dynamic>> get myGroups => _myGroups;
   List<Map<String, dynamic>> get currentExpenses => _currentExpenses;
   List<Map<String, dynamic>> get myDebts => _myDebts;
-  List<Map<String, dynamic>> get notifications => _notifications;
+  List<AppNotification> get notifications => _notifications;
   List<Map<String, dynamic>> get recentActivity => _recentActivity;
   bool get isLoading => _isLoading;
   String? get error => _error;
@@ -62,8 +63,7 @@ class AppProvider extends ChangeNotifier {
       )
       .toList();
 
-  int get unreadCount =>
-      _notifications.where((n) => n['is_read'] == false).length;
+  int get unreadCount => _notifications.where((n) => !n.isRead).length;
 
   // =========== INIT ===========
   Future<void> init() async {
@@ -95,11 +95,11 @@ class AppProvider extends ChangeNotifier {
     _profile = results[0] as Map<String, dynamic>;
     _myGroups = results[1] as List<Map<String, dynamic>>;
     _myDebts = results[2] as List<Map<String, dynamic>>;
-    _notifications = results[3] as List<Map<String, dynamic>>;
+    _notifications = results[3] as List<AppNotification>;
     _recentActivity = results[4] as List<Map<String, dynamic>>;
     // Seed the latest timestamp so first realtime update doesn't re-notify
     if (_notifications.isNotEmpty) {
-      _latestNotifTimestamp = _notifications.first['created_at'] as String?;
+      _latestNotifTimestamp = _notifications.first.createdAt;
     }
     _isLoading = false;
     notifyListeners();
@@ -116,14 +116,11 @@ class AppProvider extends ChangeNotifier {
       // Detect genuinely new notifications and fire OS push notifications
       if (_latestNotifTimestamp != null) {
         for (final notif in data) {
-          final t = notif['created_at'] as String? ?? '';
-          if (t.compareTo(_latestNotifTimestamp!) > 0) {
+          if (notif.createdAt.isAfter(_latestNotifTimestamp!)) {
             LocalNotificationsHelper.showNotification(
-              title: LocalNotificationsHelper.titleForType(
-                notif['type'] as String?,
-              ),
-              body: notif['message'] as String? ?? 'New notification',
-              id: notif['id'].hashCode,
+              title: LocalNotificationsHelper.titleForType(notif.type),
+              body: notif.message.isEmpty ? 'New notification' : notif.message,
+              id: notif.id.hashCode,
             );
           }
         }
@@ -134,7 +131,7 @@ class AppProvider extends ChangeNotifier {
         _notifications = data;
       }
       if (_notifications.isNotEmpty) {
-        _latestNotifTimestamp = _notifications.first['created_at'] as String?;
+        _latestNotifTimestamp = _notifications.first.createdAt;
       }
       notifyListeners();
     });
@@ -174,7 +171,7 @@ class AppProvider extends ChangeNotifier {
     _myGroups = [];
     _currentExpenses = [];
     _myDebts = [];
-    _notifications = [];
+    _notifications = <AppNotification>[];
     _recentActivity = [];
     notifyListeners();
   }
@@ -336,9 +333,9 @@ class AppProvider extends ChangeNotifier {
   // =========== NOTIFS ===========
   Future<void> markAllNotificationsRead() async {
     await _notifs.markAllRead();
-    for (final n in _notifications) {
-      n['is_read'] = true;
-    }
+    _notifications = _notifications
+        .map((n) => n.copyWith(isRead: true))
+        .toList();
     notifyListeners();
   }
 

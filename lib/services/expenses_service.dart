@@ -3,7 +3,11 @@ import 'supabase_client.dart';
 
 class ExpensesService {
   // =========== GET ALL EXPENSE OF GROUP ===========
-  Future<List<Map<String, dynamic>>> getGroupExpenses(String groupId, {String? search, String? category}) async {
+  Future<List<Map<String, dynamic>>> getGroupExpenses(
+    String groupId, {
+    String? search,
+    String? category,
+  }) async {
     var query = supabase
         .from('expenses')
         .select('''
@@ -43,7 +47,8 @@ class ExpensesService {
 
     if (receiptFile != null) {
       final ext = receiptFile.path.split('.').last;
-      final path = '$currentUserId/${DateTime.now().millisecondsSinceEpoch}.$ext';
+      final path =
+          '$currentUserId/${DateTime.now().millisecondsSinceEpoch}.$ext';
 
       await supabase.storage.from('receipts').upload(path, receiptFile);
       receiptUrl = supabase.storage.from('receipts').getPublicUrl(path);
@@ -67,9 +72,15 @@ class ExpensesService {
 
     await supabase
         .from('expense_splits')
-        .insert(splitBetween.map((uid) => {'expense_id': expenseId, 'user_id': uid}).toList());
+        .insert(
+          splitBetween
+              .map((uid) => {'expense_id': expenseId, 'user_id': uid})
+              .toList(),
+        );
 
-    final share = double.parse((amount / splitBetween.length).toStringAsFixed(2));
+    final share = double.parse(
+      (amount / splitBetween.length).toStringAsFixed(2),
+    );
 
     final debtRows = splitBetween
         .where((uid) => uid != paidByUserId)
@@ -95,7 +106,8 @@ class ExpensesService {
           (uid) => {
             'user_id': uid,
             'type': 'new_expense',
-            'message': 'New expense "$description" — your share is PHP ${share.toStringAsFixed(2)}',
+            'message':
+                'New expense "$description" — your share is PHP ${share.toStringAsFixed(2)}',
           },
         )
         .toList();
@@ -104,11 +116,24 @@ class ExpensesService {
       await supabase.from('notifications').insert(notifRows);
     }
 
+    // Notify the payer as confirmation
+    await supabase.from('notifications').insert({
+      'user_id': paidByUserId,
+      'type': 'new_expense',
+      'message':
+          'You added "$description" — PHP ${amount.toStringAsFixed(2)} split ${splitBetween.length} way${splitBetween.length > 1 ? 's' : ''} (PHP ${share.toStringAsFixed(2)} each).',
+    });
+
     return expense;
   }
 
   // =========== UPDATE EXPENSE ===========
-  Future<void> updateExpense(String expenseId, {String? description, double? amount, String? category}) async {
+  Future<void> updateExpense(
+    String expenseId, {
+    String? description,
+    double? amount,
+    String? category,
+  }) async {
     final updates = <String, dynamic>{
       'updated_at': DateTime.now().toIso8601String(),
       ...?description != null ? {'description': description} : null,
@@ -126,22 +151,37 @@ class ExpensesService {
 
   // =========== REAL TIME UPDATE EXPENSE OF A GROUP ===========
   Stream<List<Map<String, dynamic>>> watchGroupExpenses(String groupId) {
-    return supabase.from('expenses').stream(primaryKey: ['id']).eq('group_id', groupId).order('date', ascending: false);
+    return supabase
+        .from('expenses')
+        .stream(primaryKey: ['id'])
+        .eq('group_id', groupId)
+        .order('date', ascending: false);
   }
 
   // =========== TOTAL EXPENSE OF GROUP ===========
   Future<double> getTotalExpenses(String groupId) async {
-    final List<dynamic> data = await supabase.from('expenses').select('amount').eq('group_id', groupId);
+    final List<dynamic> data = await supabase
+        .from('expenses')
+        .select('amount')
+        .eq('group_id', groupId);
 
-    return data.fold<double>(0.0, (double sum, dynamic e) => sum + (e['amount'] as num).toDouble());
+    return data.fold<double>(
+      0.0,
+      (double sum, dynamic e) => sum + (e['amount'] as num).toDouble(),
+    );
   }
 
   // =========== RECENT ACTIVITY ===========
   Future<List<Map<String, dynamic>>> getRecentActivity() async {
     // Get user's group IDs first
-    final memberships = await supabase.from('group_members').select('group_id').eq('user_id', currentUserId);
+    final memberships = await supabase
+        .from('group_members')
+        .select('group_id')
+        .eq('user_id', currentUserId);
 
-    final groupIds = (memberships as List).map((r) => r['group_id'] as String).toList();
+    final groupIds = (memberships as List)
+        .map((r) => r['group_id'] as String)
+        .toList();
 
     if (groupIds.isEmpty) return [];
 

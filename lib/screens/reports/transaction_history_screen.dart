@@ -3,7 +3,9 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../providers/app_provider.dart';
+import '../../utils/helpers.dart';
 import '../../widgets/notification_bell.dart';
+import '../../widgets/skeleton.dart';
 import '../profile_screen.dart';
 
 class TransactionHistoryScreen extends StatefulWidget {
@@ -151,10 +153,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              'Failed to load transactions: $e',
-              style: GoogleFonts.montserrat(),
-            ),
+            content: Text(friendlyError(e), style: GoogleFonts.montserrat()),
             backgroundColor: Colors.red,
           ),
         );
@@ -394,7 +393,16 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                   child: RefreshIndicator(
                     onRefresh: _loadTransactions,
                     child: _isLoading
-                        ? const Center(child: CircularProgressIndicator())
+                        ? ListView.builder(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            itemCount: 6,
+                            itemBuilder: (_, __) => const SkeletonListItem(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 10,
+                              ),
+                            ),
+                          )
                         : _filteredTransactions.isEmpty
                         ? Center(
                             child: Padding(

@@ -13,7 +13,10 @@ import 'groups/create_group_screen.dart';
 import 'debts/debt_list_screen.dart';
 import 'groups/group_expense_screen.dart';
 import 'groups/add_expense_screen.dart';
+import '../models/app_notification.dart';
+import '../utils/helpers.dart';
 import '../widgets/notification_bell.dart';
+import '../widgets/skeleton.dart';
 
 class _SubtractedCardClipper extends CustomClipper<Path> {
   @override
@@ -249,6 +252,7 @@ class _HomeTabState extends State<_HomeTab> {
   bool _loadingGroups = true;
   double _iOwe = 0.0;
   double _owedToMe = 0.0;
+  bool _balanceVisible = false;
   List<Map<String, dynamic>> _recentActivities = [];
   bool _loadingActivities = true;
 
@@ -325,10 +329,7 @@ class _HomeTabState extends State<_HomeTab> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              'Failed to load balance: $e',
-              style: GoogleFonts.montserrat(),
-            ),
+            content: Text(friendlyError(e), style: GoogleFonts.montserrat()),
             backgroundColor: Colors.red,
           ),
         );
@@ -490,10 +491,63 @@ class _HomeTabState extends State<_HomeTab> {
                           },
                           child: ClipRect(
                             child: _loadingGroups
-                                ? const SizedBox(
+                                ? SizedBox(
                                     height: 220,
-                                    child: Center(
-                                      child: CircularProgressIndicator(),
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(16),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              const SkeletonBox(
+                                                width: 80,
+                                                height: 14,
+                                                borderRadius: 7,
+                                              ),
+                                              const Spacer(),
+                                              const SkeletonBox(
+                                                width: 100,
+                                                height: 28,
+                                                borderRadius: 14,
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 8),
+                                          const SkeletonBox(
+                                            height: 36,
+                                            borderRadius: 8,
+                                          ),
+                                          const SizedBox(height: 8),
+                                          const SkeletonBox(
+                                            width: 120,
+                                            height: 11,
+                                            borderRadius: 5,
+                                          ),
+                                          const SizedBox(height: 10),
+                                          Row(
+                                            children: [
+                                              const SkeletonBox(
+                                                width: 36,
+                                                height: 36,
+                                                borderRadius: 18,
+                                              ),
+                                              const SizedBox(width: 8),
+                                              const SkeletonBox(
+                                                width: 36,
+                                                height: 36,
+                                                borderRadius: 18,
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 10),
+                                          const SkeletonBox(
+                                            height: 40,
+                                            borderRadius: 20,
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                   )
                                 : _groups.isEmpty
@@ -731,27 +785,31 @@ class _HomeTabState extends State<_HomeTab> {
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Total Expenses',
-                                      style: GoogleFonts.montserrat(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w500,
-                                        color: const Color(0xFF424242),
+                                Flexible(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Total Expenses',
+                                        style: GoogleFonts.montserrat(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w500,
+                                          color: const Color(0xFF424242),
+                                        ),
                                       ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      'PHP ${(_groupTotals[group['id']] ?? 0.0).toStringAsFixed(2)}',
-                                      style: GoogleFonts.montserrat(
-                                        fontSize: 32,
-                                        fontWeight: FontWeight.bold,
-                                        color: const Color(0xFF003CC1),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        'PHP ${(_groupTotals[group['id']] ?? 0.0).toStringAsFixed(2)}',
+                                        style: GoogleFonts.montserrat(
+                                          fontSize: 32,
+                                          fontWeight: FontWeight.bold,
+                                          color: const Color(0xFF003CC1),
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
                                       ),
-                                    ),
-                                  ],
+                                    ],
+                                  ),
                                 ),
 
                                 Flexible(
@@ -1096,27 +1154,30 @@ class _HomeTabState extends State<_HomeTab> {
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Total Expenses',
-                                    style: GoogleFonts.montserrat(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w500,
-                                      color: const Color(0xFF424242),
+                              Flexible(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Total Expenses',
+                                      style: GoogleFonts.montserrat(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w500,
+                                        color: const Color(0xFF424242),
+                                      ),
                                     ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    'PHP 0.00',
-                                    style: GoogleFonts.montserrat(
-                                      fontSize: 32,
-                                      fontWeight: FontWeight.bold,
-                                      color: const Color(0xFF003CC1),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'PHP 0.00',
+                                      style: GoogleFonts.montserrat(
+                                        fontSize: 32,
+                                        fontWeight: FontWeight.bold,
+                                        color: const Color(0xFF003CC1),
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
 
                               Container(
@@ -1369,8 +1430,6 @@ class _HomeTabState extends State<_HomeTab> {
   }
 
   Widget _buildBalanceOverviewCard(BuildContext context) {
-    final iOwe = _iOwe;
-    final owedToMe = _owedToMe;
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -1385,12 +1444,17 @@ class _HomeTabState extends State<_HomeTab> {
         ),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: const Color.fromARGB(255, 158, 158, 158).withOpacity(0.3),
+          color: const Color.fromARGB(
+            255,
+            158,
+            158,
+            158,
+          ).withValues(alpha: 0.3),
           width: 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 15,
             offset: const Offset(0, 5),
           ),
@@ -1399,31 +1463,54 @@ class _HomeTabState extends State<_HomeTab> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Center(
-            child: Text(
-              'Balance Overview',
-              style: GoogleFonts.montserrat(
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
-                color: const Color(0xFF003CC1),
-              ),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Balance Overview',
+                  style: GoogleFonts.montserrat(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF003CC1),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                GestureDetector(
+                  onTap: () =>
+                      setState(() => _balanceVisible = !_balanceVisible),
+                  child: Icon(
+                    _balanceVisible
+                        ? Icons.visibility_outlined
+                        : Icons.visibility_off_outlined,
+                    size: 15,
+                    color: const Color(0xFF003CC1),
+                  ),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 16),
           _buildBalanceItem(
-            label: 'Owe',
-            amount: iOwe.toStringAsFixed(2),
+            label: 'You Owe',
+            amount: _iOwe.toStringAsFixed(2),
+            sign: '−',
             color: const Color(0xFFEF5350),
             backgroundColor: const Color(0xFFFFEBEE),
-            borderColor: const Color(0xFFEF5350).withOpacity(0.4),
+            borderColor: const Color(0xFFEF5350).withValues(alpha: 0.4),
+            visible: _balanceVisible,
           ),
           const SizedBox(height: 12),
           _buildBalanceItem(
-            label: 'Owed',
-            amount: owedToMe.toStringAsFixed(2),
+            label: 'Owes You',
+            amount: _owedToMe.toStringAsFixed(2),
+            sign: '+',
             color: const Color(0xFF66BB6A),
             backgroundColor: const Color(0xFFE8F5E9),
-            borderColor: const Color(0xFF66BB6A).withOpacity(0.4),
+            borderColor: const Color(0xFF66BB6A).withValues(alpha: 0.4),
+            visible: _balanceVisible,
           ),
         ],
       ),
@@ -1433,32 +1520,33 @@ class _HomeTabState extends State<_HomeTab> {
   Widget _buildBalanceItem({
     required String label,
     required String amount,
+    required String sign,
     required Color color,
     required Color backgroundColor,
     required Color borderColor,
+    required bool visible,
   }) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
       decoration: BoxDecoration(
         color: backgroundColor,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: borderColor, width: 1),
       ),
       child: Row(
-        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Container(
             width: 20,
             height: 20,
             decoration: BoxDecoration(
-              color: color.withOpacity(0.15),
+              color: color.withValues(alpha: 0.15),
               shape: BoxShape.circle,
             ),
             child: Center(
               child: Text(
-                label == 'Owe' ? '−' : '+',
+                sign,
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.bold,
@@ -1470,15 +1558,41 @@ class _HomeTabState extends State<_HomeTab> {
           ),
           const SizedBox(width: 6),
           Expanded(
-            child: Text(
-              amount,
-              style: GoogleFonts.montserrat(
-                fontSize: 13,
-                fontWeight: FontWeight.bold,
-                color: color,
-              ),
-              overflow: TextOverflow.ellipsis,
-              maxLines: 1,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  label,
+                  style: GoogleFonts.montserrat(
+                    fontSize: 9,
+                    fontWeight: FontWeight.w600,
+                    color: color.withValues(alpha: 0.8),
+                  ),
+                ),
+                SizedBox(
+                  height: 18,
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 200),
+                    child: Align(
+                      key: ValueKey(visible),
+                      alignment: Alignment.centerLeft,
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          visible ? 'PHP $amount' : '••••••',
+                          style: GoogleFonts.montserrat(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: color,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -1532,10 +1646,12 @@ class _HomeTabState extends State<_HomeTab> {
         const SizedBox(height: 16),
 
         if (_loadingActivities)
-          const Center(
-            child: Padding(
-              padding: EdgeInsets.symmetric(vertical: 12),
-              child: CircularProgressIndicator(),
+          Column(
+            children: List.generate(
+              3,
+              (_) => const SkeletonListItem(
+                padding: EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+              ),
             ),
           )
         else if (_recentActivities.isEmpty)
@@ -1649,7 +1765,7 @@ class _HomeTabState extends State<_HomeTab> {
 // ignore_for_file: unused_element
 class _NotifDropdown extends StatelessWidget {
   final LayerLink link;
-  final List<Map<String, dynamic>> notifications;
+  final List<AppNotification> notifications;
   final int unreadCount;
   final VoidCallback onClose;
   final VoidCallback onMarkAllRead;
@@ -1821,16 +1937,16 @@ class _NotifDropdown extends StatelessWidget {
 }
 
 class _NotifTile extends StatelessWidget {
-  final Map<String, dynamic> notification;
+  final AppNotification notification;
 
   const _NotifTile({required this.notification});
 
   @override
   Widget build(BuildContext context) {
-    final type = notification['type'] as String? ?? '';
-    final message = notification['message'] as String? ?? '';
-    final isRead = notification['is_read'] as bool? ?? true;
-    final createdAt = notification['created_at'] as String? ?? '';
+    final type = notification.type;
+    final message = notification.message;
+    final isRead = notification.isRead;
+    final createdAt = notification.createdAt.toIso8601String();
 
     IconData icon;
     Color iconBg;

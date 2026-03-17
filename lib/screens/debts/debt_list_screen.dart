@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../providers/app_provider.dart';
+import '../../utils/helpers.dart';
+import '../../widgets/skeleton.dart';
 
 class DebtListScreen extends StatefulWidget {
   const DebtListScreen({super.key});
@@ -31,10 +33,7 @@ class _DebtListScreenState extends State<DebtListScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              'Failed to load debts: $e',
-              style: GoogleFonts.montserrat(),
-            ),
+            content: Text(friendlyError(e), style: GoogleFonts.montserrat()),
             backgroundColor: Colors.red,
           ),
         );
@@ -85,7 +84,9 @@ class _DebtListScreenState extends State<DebtListScreen> {
                     const SizedBox(height: 20),
 
                     if (_isLoading)
-                      const Center(child: CircularProgressIndicator())
+                      Column(
+                        children: List.generate(4, (_) => const SkeletonCard()),
+                      )
                     else if (_debts.isEmpty)
                       Center(
                         child: Padding(

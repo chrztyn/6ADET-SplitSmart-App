@@ -7,6 +7,8 @@ import '../dashboard_screen.dart';
 import '../profile_screen.dart';
 import 'add_expense_screen.dart';
 import 'add_member_screen.dart';
+import '../../utils/helpers.dart';
+import '../../widgets/skeleton.dart';
 
 class GroupExpenseScreen extends StatefulWidget {
   final Map<String, dynamic> group;
@@ -40,10 +42,7 @@ class _GroupExpenseScreenState extends State<GroupExpenseScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              'Error loading expenses: $e',
-              style: GoogleFonts.montserrat(),
-            ),
+            content: Text(friendlyError(e), style: GoogleFonts.montserrat()),
             backgroundColor: Colors.red,
           ),
         );
@@ -403,7 +402,14 @@ class _GroupExpenseScreenState extends State<GroupExpenseScreen> {
 
   Widget _buildExpenseList(BuildContext context) {
     if (_loadingExpenses) {
-      return const Center(child: CircularProgressIndicator());
+      return Column(
+        children: List.generate(
+          4,
+          (_) => const SkeletonListItem(
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          ),
+        ),
+      );
     }
 
     if (_expenses.isEmpty) {
@@ -882,9 +888,15 @@ class _MembersBottomSheetState extends State<_MembersBottomSheet> {
           ),
           const SizedBox(height: 20),
           if (_loading)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 32),
-              child: Center(child: CircularProgressIndicator()),
+            Column(
+              children: List.generate(
+                4,
+                (_) => const SkeletonListItem(
+                  circleSize: 36,
+                  showTrailing: false,
+                  padding: EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                ),
+              ),
             )
           else if (_members.isEmpty)
             Padding(
