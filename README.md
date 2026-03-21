@@ -31,7 +31,6 @@ Make sure you have the following installed:
 
 ```bash
 git clone https://github.com/chrztyn/6ADET-SplitSmart-App.git
-cd splitsmart
 ```
 
 ### Step 2 — Install dependencies
