@@ -239,7 +239,7 @@ class _SettleDebtScreenState extends State<SettleDebtScreen> {
                   ),
                   const SizedBox(height: 22),
 
-                  _buildLabel('Proof of Payment*'),
+                  _buildLabel('Proof of Payment (Optional)'),
                   const SizedBox(height: 4),
                   Text(
                     'Insert Image',
