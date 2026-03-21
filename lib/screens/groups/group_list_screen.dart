@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../providers/app_provider.dart';
+import '../../services/debts_service.dart';
 import '../../widgets/notification_bell.dart';
 import '../../widgets/skeleton.dart';
 import 'group_expense_screen.dart';
@@ -15,12 +17,54 @@ class GroupListScreen extends StatefulWidget {
 }
 
 class _GroupListScreenState extends State<GroupListScreen> {
+  Map<String, bool> _groupHasDebt = {};
+  bool _checkingDebts = true;
+
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<AppProvider>().refreshGroups();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final provider = context.read<AppProvider>();
+      await provider.refreshGroups();
+      _loadGroupDebts(provider.myGroups);
     });
+  }
+
+  Future<void> _loadGroupDebts(List<Map<String, dynamic>> groups) async {
+    final userId = Supabase.instance.client.auth.currentUser?.id;
+    final result = <String, bool>{};
+    try {
+      for (final group in groups) {
+        final groupId = group['id'] as String;
+        try {
+          final debts = await DebtsService().getGroupDebts(
+            groupId,
+            status: 'pending',
+          );
+          bool hasDebt = false;
+          for (final d in debts) {
+            if (d['from_user_id'] == userId || d['to_user_id'] == userId) {
+              final amount = (d['amount'] as num).toDouble();
+              final paidAmount = (d['paid_amount'] as num? ?? 0).toDouble();
+              if ((amount - paidAmount) > 0) {
+                hasDebt = true;
+                break;
+              }
+            }
+          }
+          result[groupId] = hasDebt;
+        } catch (_) {
+          result[groupId] = true;
+        }
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _groupHasDebt = result;
+          _checkingDebts = false;
+        });
+      }
+    }
   }
 
   @override
@@ -118,7 +162,10 @@ class _GroupListScreenState extends State<GroupListScreen> {
               ),
             )
           : RefreshIndicator(
-              onRefresh: () => provider.refreshGroups(),
+              onRefresh: () async {
+                await provider.refreshGroups();
+                _loadGroupDebts(provider.myGroups);
+              },
               child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 child: Padding(
@@ -202,7 +249,9 @@ class _GroupListScreenState extends State<GroupListScreen> {
               ),
             );
             if (result == true && mounted) {
-              context.read<AppProvider>().refreshGroups();
+              final prov = context.read<AppProvider>();
+              await prov.refreshGroups();
+              _loadGroupDebts(prov.myGroups);
             }
           },
           borderRadius: BorderRadius.circular(14),
@@ -239,6 +288,7 @@ class _GroupListScreenState extends State<GroupListScreen> {
     required Map<String, dynamic> group,
     required AppProvider provider,
   }) {
+    final hasDebt = _groupHasDebt[group['id']] ?? false;
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
@@ -306,49 +356,70 @@ class _GroupListScreenState extends State<GroupListScreen> {
                 ),
 
                 // Leave group with confirmation dialog
-                InkWell(
-                  onTap: () async {
-                    final confirm = await showDialog<bool>(
-                      context: context,
-                      builder: (ctx) => AlertDialog(
-                        title: Text(
-                          'Leave Group',
-                          style: GoogleFonts.montserrat(
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        content: Text(
-                          'Are you sure you want to leave "${group['name']}"?',
-                          style: GoogleFonts.montserrat(),
-                        ),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(ctx, false),
-                            child: Text(
-                              'Cancel',
-                              style: GoogleFonts.montserrat(),
+                Opacity(
+                  opacity: (hasDebt || _checkingDebts) ? 0.4 : 1.0,
+                  child: InkWell(
+                    onTap: () async {
+                      if (hasDebt || _checkingDebts) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              'You cannot leave this group while you have a pending balance. Settle all debts first.',
+                              style: GoogleFonts.montserrat(fontSize: 13),
+                            ),
+                            backgroundColor: const Color(0xFFEF5350),
+                            behavior: SnackBarBehavior.floating,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
                             ),
                           ),
-                          TextButton(
-                            onPressed: () => Navigator.pop(ctx, true),
-                            child: Text(
-                              'Leave',
-                              style: GoogleFonts.montserrat(color: Colors.red),
+                        );
+                        return;
+                      }
+                      final confirm = await showDialog<bool>(
+                        context: context,
+                        builder: (ctx) => AlertDialog(
+                          title: Text(
+                            'Leave Group',
+                            style: GoogleFonts.montserrat(
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
-                        ],
+                          content: Text(
+                            'Are you sure you want to leave "${group['name']}"?',
+                            style: GoogleFonts.montserrat(),
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(ctx, false),
+                              child: Text(
+                                'Cancel',
+                                style: GoogleFonts.montserrat(),
+                              ),
+                            ),
+                            TextButton(
+                              onPressed: () => Navigator.pop(ctx, true),
+                              child: Text(
+                                'Leave',
+                                style: GoogleFonts.montserrat(
+                                  color: Colors.red,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                      if (confirm == true && mounted) {
+                        await provider.deleteGroup(group['id']);
+                      }
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      child: const Icon(
+                        Icons.exit_to_app,
+                        color: Color(0xFFEF5350),
+                        size: 26,
                       ),
-                    );
-                    if (confirm == true && mounted) {
-                      await provider.deleteGroup(group['id']);
-                    }
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    child: const Icon(
-                      Icons.exit_to_app,
-                      color: Color(0xFFEF5350),
-                      size: 26,
                     ),
                   ),
                 ),

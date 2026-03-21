@@ -785,7 +785,8 @@ class _HomeTabState extends State<_HomeTab> {
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Flexible(
+                                // LEFT: amount column — takes all remaining space
+                                Expanded(
                                   child: Column(
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
@@ -799,20 +800,29 @@ class _HomeTabState extends State<_HomeTab> {
                                         ),
                                       ),
                                       const SizedBox(height: 4),
-                                      Text(
-                                        'PHP ${(_groupTotals[group['id']] ?? 0.0).toStringAsFixed(2)}',
-                                        style: GoogleFonts.montserrat(
-                                          fontSize: 32,
-                                          fontWeight: FontWeight.bold,
-                                          color: const Color(0xFF003CC1),
+                                      FittedBox(
+                                        fit: BoxFit.scaleDown,
+                                        alignment: Alignment.centerLeft,
+                                        child: Text(
+                                          'PHP ${(_groupTotals[group['id']] ?? 0.0).toStringAsFixed(2)}',
+                                          style: GoogleFonts.montserrat(
+                                            fontSize: 24,
+                                            fontWeight: FontWeight.bold,
+                                            color: const Color(0xFF003CC1),
+                                          ),
                                         ),
-                                        overflow: TextOverflow.ellipsis,
                                       ),
                                     ],
                                   ),
                                 ),
 
-                                Flexible(
+                                const SizedBox(width: 12),
+
+                                // RIGHT: group name badge — capped width so it never squeezes the amount
+                                ConstrainedBox(
+                                  constraints: const BoxConstraints(
+                                    maxWidth: 130,
+                                  ),
                                   child: Container(
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: 12,
@@ -823,6 +833,7 @@ class _HomeTabState extends State<_HomeTab> {
                                       borderRadius: BorderRadius.circular(16),
                                     ),
                                     child: Row(
+                                      mainAxisSize: MainAxisSize.min,
                                       children: [
                                         Container(
                                           width: 6,
@@ -833,12 +844,11 @@ class _HomeTabState extends State<_HomeTab> {
                                           ),
                                         ),
                                         const SizedBox(width: 6),
-                                        Expanded(
+                                        Flexible(
                                           child: Text(
                                             group['name'] ?? 'Group',
                                             overflow: TextOverflow.ellipsis,
                                             maxLines: 1,
-                                            softWrap: false,
                                             style: GoogleFonts.montserrat(
                                               fontSize: 10,
                                               fontWeight: FontWeight.w600,
