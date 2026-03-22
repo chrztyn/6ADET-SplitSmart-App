@@ -39,7 +39,14 @@ git clone https://github.com/chrztyn/6ADET-SplitSmart-App.git
 flutter pub get
 ```
 
-### Step 3 — Set up environment variables
+### Step 3 — Set up the database schema
+
+1. Go to your Supabase project dashboard
+2. Click **SQL Editor** in the left sidebar
+3. Copy the contents of `supabase_schema.sql` from this repo
+4. Paste it into the SQL Editor and click **Run**
+
+### Step 3.1 — Set up environment variables
 
 Create a `.env` file in the root of the project and add your Supabase credentials:
 
